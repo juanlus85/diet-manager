@@ -21,15 +21,22 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import { CalendarDays, ChefHat, LayoutDashboard, LogOut, PanelLeft, Scale, ShoppingCart, BarChart2, Upload, User } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+  { icon: LayoutDashboard, label: "Hoy", path: "/" },
+  { icon: CalendarDays, label: "Calendario", path: "/calendar" },
+  { icon: Upload, label: "Subir Dieta", path: "/upload" },
+  { icon: ChefHat, label: "Menús / Historial", path: "/menu-history" },
+  { icon: Scale, label: "Control de Peso", path: "/weight" },
+  { icon: ShoppingCart, label: "Lista de la Compra", path: "/shopping" },
+  { icon: ChefHat, label: "Recetas", path: "/recipes" },
+  { icon: BarChart2, label: "Informes", path: "/reports" },
+  { icon: User, label: "Mi Perfil", path: "/profile" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -171,7 +178,7 @@ function DashboardLayoutContent({
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="font-semibold tracking-tight truncate">
-                    Navigation
+                    🥗 Gestor de Dieta
                   </span>
                 </div>
               ) : null}
@@ -226,7 +233,7 @@ function DashboardLayoutContent({
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign out</span>
+                  <span>Cerrar sesión</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
