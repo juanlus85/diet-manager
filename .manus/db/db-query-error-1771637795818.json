@@ -1,0 +1,8 @@
+{
+  "query": "SELECT sd.id, CAST(sd.scheduledDate AS CHAR) as fecha, sd.menuDayId, md.name, md.lunch1, md.dinner1 FROM scheduled_days sd LEFT JOIN menu_days md ON sd.menuDayId = md.id ORDER BY sd.scheduledDate;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user uN1yFnMXg2uz2sS.8082b7f1b822 --database 9ooxAsLz7yvUa6JxLZqCkr --execute SELECT sd.id, CAST(sd.scheduledDate AS CHAR) as fecha, sd.menuDayId, md.name, md.lunch1, md.dinner1 FROM scheduled_days sd LEFT JOIN menu_days md ON sd.menuDayId = md.id ORDER BY sd.scheduledDate;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'md.name' in 'field list'"
+  ]
+}

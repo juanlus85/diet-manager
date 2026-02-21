@@ -1,0 +1,58 @@
+{
+  "query": "SELECT id, lunch1, lunch2, dinner1, dinner2, breakfast FROM menu_days WHERE id IN (1,2,3,4,5,6,7) ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user uN1yFnMXg2uz2sS.8082b7f1b822 --database 9ooxAsLz7yvUa6JxLZqCkr --execute SELECT id, lunch1, lunch2, dinner1, dinner2, breakfast FROM menu_days WHERE id IN (1,2,3,4,5,6,7) ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "lunch1": "Ensalada de lechuga, pimientos, atún y jamón york",
+      "lunch2": "Calamares a la romana.",
+      "dinner1": "Jamón york con unas rodajas de tomate",
+      "dinner2": "Filetes rusos con mostaza.",
+      "breakfast": "Café solo, té o infusiones con sacarina"
+    },
+    {
+      "id": "2",
+      "lunch1": "Alcachofas rehogadas con jamón",
+      "lunch2": "Filete de ternera a la plancha.",
+      "dinner1": "Consomé o sopa de verduras",
+      "dinner2": "Una pescadilla frita.",
+      "breakfast": "Café solo, té o infusiones con sacarina"
+    },
+    {
+      "id": "3",
+      "lunch1": "Cazuela de gambas, champiñón y jamón",
+      "lunch2": "1/4 de pollo al ajillo.",
+      "dinner1": "Filete de ternera empanado",
+      "dinner2": "Una naranja.",
+      "breakfast": "Café solo, té o infusiones con sacarina"
+    },
+    {
+      "id": "4",
+      "lunch1": "Sopa de pescado sin pasta o consomé de ave",
+      "lunch2": "Lenguado frito o a la plancha.",
+      "dinner1": "Tortilla de gambas",
+      "dinner2": "Una naranja.",
+      "breakfast": "Café solo, té o infusiones con sacarina"
+    },
+    {
+      "id": "5",
+      "lunch1": "Entremeses (atún, jamón york y aceitunas)",
+      "lunch2": "Ternera guisada con verdura (sin zanahoria).",
+      "dinner1": "Consomé de pollo o sopa de verduras",
+      "dinner2": "Una naranja.",
+      "breakfast": "Café solo, té o infusiones con sacarina"
+    },
+    {
+      "id": "6",
+      "lunch1": "Ensalada de lechuga y espárragos",
+      "lunch2": "Filete de ternera a la plancha.",
+      "dinner1": "Fiambres variados",
+      "dinner2": "Tortilla francesa.",
+      "breakfast": "Café solo, té o infusiones con sacarina"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tlunch1\tlunch2\tdinner1\tdinner2\tbreakfast\n1\tEnsalada de lechuga, pimientos, atún y jamón york\tCalamares a la romana.\tJamón york con unas rodajas de tomate\tFiletes rusos con mostaza.\tCafé solo, té o infusiones con sacarina\n2\tAlcachofas rehogadas con jamón\tFilete de ternera a la plancha.\tConsomé o sopa de verduras\tUna pescadilla frita.\tCafé solo, té o infusiones con sacarina\n3\tCazuela de gambas, champiñón y jamón\t1/4 de pollo al ajillo.\tFilete de ternera empanado\tUna naranja.\tCafé solo, té o infusiones con sacarina\n4\tSopa de pescado sin pasta o consomé de ave\tLenguado frito o a la plancha.\tTortilla de gambas\tUna naranja.\tCafé solo, té o infusiones con sacarina\n5\tEntremeses (atún, jamón york y aceitunas)\tTernera guisada con verdura (sin zanahoria).\tConsomé de pollo o sopa de verduras\tUna naranja.\tCafé solo, té o infusiones con sacarina\n6\tEnsalada de lechuga y espárragos\tFilete de ternera a la plancha.\tFiambres variados\tTortilla francesa.\tCafé solo, té o infusiones con sacarina\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}

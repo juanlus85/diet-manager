@@ -178,7 +178,7 @@ export async function getScheduledDays(userId: number, from?: string, to?: strin
   // Con mode: 'string', Drizzle compara strings YYYY-MM-DD directamente con MySQL DATE
   if (from) conditions.push(gte(scheduledDays.scheduledDate, from));
   if (to) conditions.push(lte(scheduledDays.scheduledDate, to));
-  return db
+  const result = await db
     .select({
       scheduled: scheduledDays,
       menu: menuDays,
@@ -187,6 +187,7 @@ export async function getScheduledDays(userId: number, from?: string, to?: strin
     .leftJoin(menuDays, eq(scheduledDays.menuDayId, menuDays.id))
     .where(and(...conditions))
     .orderBy(scheduledDays.scheduledDate, scheduledDays.sortOrder);
+  return result;
 }
 
 export async function createScheduledDay(data: InsertScheduledDay) {

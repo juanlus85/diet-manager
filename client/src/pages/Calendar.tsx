@@ -22,10 +22,11 @@ import {
 } from "lucide-react";
 
 function formatDate(d: Date) {
-  // Usamos getUTC* para evitar desfase de zona horaria
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
+  // Usamos hora LOCAL del navegador para que la columna del día coincida
+  // con la fecha real del usuario (evita desfase UTC vs zona horaria local).
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 

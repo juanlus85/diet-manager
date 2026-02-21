@@ -72,3 +72,6 @@
 
 ## Bug corregido v2.6
 - [x] Bug crítico corregido: el servidor Node.js está en UTC-5. Al guardar fechas como Date objects (new Date('2026-02-22') = UTC midnight), mysql2 las convertía a hora local del servidor (2026-02-21 19:00:00 EST) y MySQL guardaba '2026-02-21' en lugar de '2026-02-22'. Solución: cambiar todos los campos DATE del schema de Drizzle a `mode: 'string'` para que se pasen como strings YYYY-MM-DD directamente a MySQL sin conversión.
+
+## Bug corregido v2.7
+- [x] Bug corregido: el calendario usaba getUTCDate() para construir las fechas de las columnas. En España (UTC+1), startOfWeek devuelve el lunes a las 00:00 CET = 23:00 UTC del día anterior, por lo que getUTCDate() devolvía el día anterior. Solución: cambiar formatDate() en Calendar.tsx para usar getFullYear/getMonth/getDate (hora local del navegador) en lugar de getUTC*.
