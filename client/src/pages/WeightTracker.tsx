@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,13 +11,14 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, Area, AreaChart,
+  ResponsiveContainer, Area, AreaChart, ReferenceLine,
 } from "recharts";
 import {
   Scale, Plus, Trash2, Target, TrendingDown, Activity,
   Dumbbell, CalendarDays, CheckCircle2, Clock, AlertCircle,
+  ChevronDown, ChevronUp, Sparkles, TableProperties,
 } from "lucide-react";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 
 function formatDateStr(d: Date | string) {
@@ -25,27 +26,72 @@ function formatDateStr(d: Date | string) {
   return date.toISOString().slice(0, 10);
 }
 
+// Convierte "YYYY-MM-DD" a fecha local segura
+function parseDate(s: string) {
+  return new Date(s + "T12:00:00");
+}
+
 export default function WeightTracker() {
   const { data: weightLogs, refetch: refetchWeight } = trpc.health.listWeightLogs.useQuery();
   const { data: weightGoals, refetch: refetchGoals } = trpc.health.listWeightGoals.useQuery();
   const { data: activityLogs, refetch: refetchActivity } = trpc.health.listActivityLogs.useQuery();
+  const { data: weeklyGoals, refetch: refetchWeekly } = trpc.health.listWeeklyGoals.useQuery();
 
   const addWeight = trpc.health.addWeightLog.useMutation({
-    onSuccess: () => { refetchWeight(); setWeightOpen(false); setWeightForm({ weight: "", logDate: new Date().toISOString().slice(0, 10), notes: "" }); toast.success("Peso registrado"); },
+    onSuccess: () => {
+      refetchWeight();
+      setWeightOpen(false);
+      setWeightForm({ weight: "", logDate: new Date().toISOString().slice(0, 10), notes: "" });
+      toast.success("Peso registrado");
+    },
   });
   const deleteWeight = trpc.health.deleteWeightLog.useMutation({ onSuccess: () => refetchWeight() });
+
   const addGoal = trpc.health.addWeightGoal.useMutation({
-    onSuccess: () => { refetchGoals(); setGoalOpen(false); setGoalForm({ targetDate: "", targetWeight: "", label: "" }); toast.success("Objetivo añadido"); },
+    onSuccess: () => {
+      refetchGoals();
+      setGoalOpen(false);
+      setGoalForm({ targetDate: "", targetWeight: "", label: "" });
+      toast.success("Objetivo añadido");
+    },
   });
   const deleteGoal = trpc.health.deleteWeightGoal.useMutation({ onSuccess: () => refetchGoals() });
+
   const addActivity = trpc.health.addActivityLog.useMutation({
-    onSuccess: () => { refetchActivity(); setActivityOpen(false); setActivityForm({ logDate: new Date().toISOString().slice(0, 10), activityType: "", duration: "", intensity: "media", notes: "" }); toast.success("Actividad registrada"); },
+    onSuccess: () => {
+      refetchActivity();
+      setActivityOpen(false);
+      setActivityForm({ logDate: new Date().toISOString().slice(0, 10), activityType: "", duration: "", intensity: "media", notes: "" });
+      toast.success("Actividad registrada");
+    },
   });
   const deleteActivity = trpc.health.deleteActivityLog.useMutation({ onSuccess: () => refetchActivity() });
 
+  const upsertWeeklyGoal = trpc.health.upsertWeeklyGoal.useMutation({
+    onSuccess: () => {
+      refetchWeekly();
+      setWeeklyGoalOpen(false);
+      setWeeklyGoalForm({ weekDate: "", targetWeight: "", notes: "" });
+      toast.success("Objetivo semanal guardado");
+    },
+  });
+  const deleteWeeklyGoal = trpc.health.deleteWeeklyGoal.useMutation({ onSuccess: () => refetchWeekly() });
+  const generateWeeklyGoals = trpc.health.generateWeeklyGoals.useMutation({
+    onSuccess: (count) => {
+      refetchWeekly();
+      setGenerateOpen(false);
+      toast.success(`${count} objetivos semanales generados`);
+    },
+  });
+
+  // ─── Estado local ────────────────────────────────────────────────────────────
   const [weightOpen, setWeightOpen] = useState(false);
   const [goalOpen, setGoalOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
+  const [weeklyGoalOpen, setWeeklyGoalOpen] = useState(false);
+  const [generateOpen, setGenerateOpen] = useState(false);
+  const [showWeeklyTable, setShowWeeklyTable] = useState(true);
+
   const [weightForm, setWeightForm] = useState({ weight: "", logDate: new Date().toISOString().slice(0, 10), notes: "" });
   const [goalForm, setGoalForm] = useState({ targetDate: "", targetWeight: "", label: "" });
   const [activityForm, setActivityForm] = useState({
@@ -55,30 +101,53 @@ export default function WeightTracker() {
     intensity: "media" as "baja" | "media" | "alta",
     notes: "",
   });
+  const [weeklyGoalForm, setWeeklyGoalForm] = useState({ weekDate: "", targetWeight: "", notes: "" });
+  const [generateForm, setGenerateForm] = useState({
+    startDate: new Date().toISOString().slice(0, 10),
+    startWeight: "",
+    endDate: "",
+    endWeight: "",
+    intervalDays: "7",
+  });
 
-  // Datos calculados
-  const sortedLogs = [...(weightLogs ?? [])].sort((a, b) =>
-    new Date(String(a.logDate)).getTime() - new Date(String(b.logDate)).getTime()
+  // ─── Datos calculados ────────────────────────────────────────────────────────
+  const sortedLogs = useMemo(() =>
+    [...(weightLogs ?? [])].sort((a, b) =>
+      new Date(String(a.logDate)).getTime() - new Date(String(b.logDate)).getTime()
+    ), [weightLogs]
   );
+
   const latestWeight = sortedLogs.length > 0 ? sortedLogs[sortedLogs.length - 1].weight : null;
   const firstWeight = sortedLogs.length > 0 ? sortedLogs[0].weight : null;
   const totalLost = firstWeight !== null && latestWeight !== null ? firstWeight - latestWeight : null;
 
-  // Datos para la gráfica
-  const chartData = sortedLogs.map((log) => ({
-    date: formatDateStr(log.logDate),
-    peso: log.weight,
-  }));
+  // Mapa de fecha → peso real
+  const weightByDate = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const log of sortedLogs) {
+      map[formatDateStr(log.logDate)] = log.weight;
+    }
+    return map;
+  }, [sortedLogs]);
 
-  // Análisis de objetivos
+  // Datos para la gráfica
+  const chartData = useMemo(() => {
+    const points = sortedLogs.map((log) => ({
+      date: formatDateStr(log.logDate),
+      peso: log.weight,
+    }));
+    return points;
+  }, [sortedLogs]);
+
+  // Análisis de objetivos a largo plazo
   const today = new Date();
   const goalsAnalysis = (weightGoals ?? []).map((goal) => {
-    const targetDate = new Date(formatDateStr(goal.targetDate) + "T12:00:00");
+    const targetDate = parseDate(formatDateStr(goal.targetDate));
     const daysTotal = firstWeight && sortedLogs.length > 0
-      ? differenceInDays(targetDate, new Date(formatDateStr(sortedLogs[0].logDate) + "T12:00:00"))
+      ? differenceInDays(targetDate, parseDate(formatDateStr(sortedLogs[0].logDate)))
       : null;
     const daysElapsed = sortedLogs.length > 0
-      ? differenceInDays(today, new Date(formatDateStr(sortedLogs[0].logDate) + "T12:00:00"))
+      ? differenceInDays(today, parseDate(formatDateStr(sortedLogs[0].logDate)))
       : null;
     const daysRemaining = differenceInDays(targetDate, today);
     const kgToLose = firstWeight !== null ? firstWeight - goal.targetWeight : null;
@@ -87,21 +156,53 @@ export default function WeightTracker() {
     const progressPct = kgToLose && kgToLose > 0 ? Math.min(100, Math.max(0, (kgLost / kgToLose) * 100)) : 0;
     const achieved = latestWeight !== null && latestWeight <= goal.targetWeight;
     const overdue = daysRemaining < 0 && !achieved;
-
-    return {
-      ...goal,
-      targetDate,
-      daysTotal,
-      daysElapsed,
-      daysRemaining,
-      kgToLose,
-      kgLost,
-      kgRemaining,
-      progressPct,
-      achieved,
-      overdue,
-    };
+    return { ...goal, targetDate, daysTotal, daysElapsed, daysRemaining, kgToLose, kgLost, kgRemaining, progressPct, achieved, overdue };
   });
+
+  // Tabla de objetivos semanales enriquecida
+  const weeklyTableData = useMemo(() => {
+    const goals = [...(weeklyGoals ?? [])].sort((a, b) =>
+      new Date(String(a.weekDate)).getTime() - new Date(String(b.weekDate)).getTime()
+    );
+    return goals.map((goal, idx) => {
+      const weekStr = formatDateStr(goal.weekDate);
+      const actualWeight = weightByDate[weekStr] ?? null;
+
+      // Buscar el peso real más cercano a esa semana (±3 días)
+      let closestWeight: number | null = actualWeight;
+      if (closestWeight === null) {
+        const goalTs = parseDate(weekStr).getTime();
+        let minDiff = Infinity;
+        for (const log of sortedLogs) {
+          const logTs = parseDate(formatDateStr(log.logDate)).getTime();
+          const diff = Math.abs(logTs - goalTs);
+          if (diff < minDiff && diff <= 3 * 24 * 60 * 60 * 1000) {
+            minDiff = diff;
+            closestWeight = log.weight;
+          }
+        }
+      }
+
+      const prevGoal = idx > 0 ? goals[idx - 1] : null;
+      const prevActual = prevGoal ? (weightByDate[formatDateStr(prevGoal.weekDate)] ?? null) : null;
+
+      const kgLostVsTarget = closestWeight !== null ? goal.targetWeight - closestWeight : null; // positivo = por debajo del objetivo (bien)
+      const kgLostVsPrev = prevActual !== null && closestWeight !== null ? prevActual - closestWeight : null;
+
+      const status: "achieved" | "above" | "pending" =
+        closestWeight === null ? "pending" :
+        closestWeight <= goal.targetWeight ? "achieved" : "above";
+
+      return {
+        ...goal,
+        weekStr,
+        actualWeight: closestWeight,
+        kgLostVsTarget,
+        kgLostVsPrev,
+        status,
+      };
+    });
+  }, [weeklyGoals, weightByDate, sortedLogs]);
 
   // Semana anterior
   const weeklyChange = (() => {
@@ -164,7 +265,7 @@ export default function WeightTracker() {
         </div>
       </div>
 
-      {/* Análisis de objetivos */}
+      {/* Análisis de objetivos a largo plazo */}
       {goalsAnalysis.length > 0 && (
         <section>
           <h2 className="text-sm font-bold mb-3 flex items-center gap-2">
@@ -178,7 +279,6 @@ export default function WeightTracker() {
                 className={`rounded-2xl border p-4 space-y-3
                   ${goal.achieved ? "border-green-200 bg-green-50/60" : goal.overdue ? "border-red-200 bg-red-50/40" : "border-border bg-card"}`}
               >
-                {/* Cabecera del objetivo */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {goal.achieved ? (
@@ -205,8 +305,6 @@ export default function WeightTracker() {
                     </Badge>
                   </div>
                 </div>
-
-                {/* Barra de progreso */}
                 <div>
                   <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
                     <span>{goal.progressPct.toFixed(0)}% completado</span>
@@ -217,30 +315,22 @@ export default function WeightTracker() {
                     className={`h-2.5 ${goal.achieved ? "[&>div]:bg-green-500" : goal.overdue ? "[&>div]:bg-red-500" : "[&>div]:bg-primary"}`}
                   />
                 </div>
-
-                {/* Estadísticas del objetivo */}
                 <div className="grid grid-cols-3 gap-2">
                   <div className="bg-background/80 rounded-xl p-2.5 text-center">
                     <p className="text-xs text-muted-foreground">Kg perdidos</p>
-                    <p className="font-bold text-sm text-green-700">
-                      {goal.kgLost > 0 ? `-${goal.kgLost.toFixed(1)}` : "0"} kg
-                    </p>
+                    <p className="font-bold text-sm text-green-700">{goal.kgLost > 0 ? `-${goal.kgLost.toFixed(1)}` : "0"} kg</p>
                   </div>
                   <div className="bg-background/80 rounded-xl p-2.5 text-center">
                     <p className="text-xs text-muted-foreground">Días transcurridos</p>
                     <p className="font-bold text-sm">{goal.daysElapsed ?? "—"}</p>
                   </div>
                   <div className="bg-background/80 rounded-xl p-2.5 text-center">
-                    <p className="text-xs text-muted-foreground">
-                      {goal.daysRemaining >= 0 ? "Días restantes" : "Días pasados"}
-                    </p>
+                    <p className="text-xs text-muted-foreground">{goal.daysRemaining >= 0 ? "Días restantes" : "Días pasados"}</p>
                     <p className={`font-bold text-sm ${goal.daysRemaining < 0 ? "text-red-600" : goal.daysRemaining < 14 ? "text-orange-600" : "text-foreground"}`}>
                       {Math.abs(goal.daysRemaining)}
                     </p>
                   </div>
                 </div>
-
-                {/* Ritmo necesario */}
                 {!goal.achieved && goal.daysRemaining > 0 && goal.kgRemaining !== null && goal.kgRemaining > 0 && (
                   <div className="bg-background/60 rounded-xl p-2.5 flex items-center gap-2">
                     <TrendingDown className="w-4 h-4 text-primary shrink-0" />
@@ -249,7 +339,6 @@ export default function WeightTracker() {
                     </p>
                   </div>
                 )}
-
                 <button
                   onClick={() => deleteGoal.mutate({ id: goal.id })}
                   className="text-xs text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1"
@@ -262,6 +351,141 @@ export default function WeightTracker() {
           </div>
         </section>
       )}
+
+      {/* ─── Tabla de objetivos semanales ──────────────────────────────────────── */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <button
+            className="text-sm font-bold flex items-center gap-2 hover:text-primary transition-colors"
+            onClick={() => setShowWeeklyTable((v) => !v)}
+          >
+            <TableProperties className="w-4 h-4 text-primary" />
+            Objetivos semanales
+            {showWeeklyTable ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+          <div className="flex gap-1.5">
+            <Button variant="outline" size="sm" onClick={() => setGenerateOpen(true)} className="gap-1.5 h-8 text-xs">
+              <Sparkles className="w-3.5 h-3.5" />
+              Generar
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setWeeklyGoalOpen(true)} className="gap-1.5 h-8 text-xs">
+              <Plus className="w-3.5 h-3.5" />
+              Añadir
+            </Button>
+          </div>
+        </div>
+
+        {showWeeklyTable && (
+          <>
+            {weeklyTableData.length === 0 ? (
+              <div className="rounded-2xl border-2 border-dashed border-muted p-6 text-center">
+                <TableProperties className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground mb-3">Sin objetivos semanales.</p>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Usa <strong>Generar</strong> para crear automáticamente una tabla de objetivos semanales entre dos fechas.
+                </p>
+                <Button size="sm" variant="outline" onClick={() => setGenerateOpen(true)} className="gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Generar objetivos
+                </Button>
+              </div>
+            ) : (
+              <div className="rounded-2xl border overflow-hidden">
+                {/* Cabecera */}
+                <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-0 bg-muted/50 px-3 py-2 text-xs font-semibold text-muted-foreground border-b">
+                  <span>Semana</span>
+                  <span className="text-right pr-2">Objetivo</span>
+                  <span className="text-right pr-2">Real</span>
+                  <span className="text-right pr-2">Perdidos</span>
+                  <span className="text-right">Estado</span>
+                </div>
+                {/* Filas */}
+                <div className="divide-y">
+                  {weeklyTableData.map((row) => {
+                    const isPast = parseDate(row.weekStr) < today;
+                    const isThisWeek = Math.abs(differenceInDays(parseDate(row.weekStr), today)) <= 3;
+                    return (
+                      <div
+                        key={row.id}
+                        className={`grid grid-cols-[1fr_auto_auto_auto_auto] gap-0 px-3 py-2.5 items-center text-sm group
+                          ${isThisWeek ? "bg-primary/5 font-medium" : ""}
+                          ${row.status === "achieved" ? "bg-green-50/50" : ""}
+                          ${row.status === "above" ? "bg-red-50/30" : ""}
+                        `}
+                      >
+                        {/* Fecha */}
+                        <div className="min-w-0">
+                          <p className={`text-xs font-medium ${isThisWeek ? "text-primary" : "text-foreground"}`}>
+                            {format(parseDate(row.weekStr), "d MMM", { locale: es })}
+                          </p>
+                          {isThisWeek && (
+                            <span className="text-[10px] text-primary font-semibold">← Esta semana</span>
+                          )}
+                        </div>
+
+                        {/* Objetivo */}
+                        <div className="text-right pr-2">
+                          <span className="text-xs font-semibold text-foreground">{row.targetWeight.toFixed(1)}</span>
+                          <span className="text-[10px] text-muted-foreground ml-0.5">kg</span>
+                        </div>
+
+                        {/* Peso real */}
+                        <div className="text-right pr-2">
+                          {row.actualWeight !== null ? (
+                            <>
+                              <span className={`text-xs font-semibold ${row.status === "achieved" ? "text-green-700" : row.status === "above" ? "text-red-600" : "text-foreground"}`}>
+                                {row.actualWeight.toFixed(1)}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground ml-0.5">kg</span>
+                            </>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">{isPast ? "—" : "·"}</span>
+                          )}
+                        </div>
+
+                        {/* Kg perdidos respecto a semana anterior */}
+                        <div className="text-right pr-2">
+                          {row.kgLostVsPrev !== null ? (
+                            <span className={`text-xs font-semibold ${row.kgLostVsPrev > 0 ? "text-green-700" : row.kgLostVsPrev < 0 ? "text-red-600" : "text-muted-foreground"}`}>
+                              {row.kgLostVsPrev > 0 ? "-" : "+"}{Math.abs(row.kgLostVsPrev).toFixed(1)}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </div>
+
+                        {/* Estado */}
+                        <div className="text-right flex items-center justify-end gap-1">
+                          {row.status === "achieved" ? (
+                            <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                          ) : row.status === "above" ? (
+                            <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                          ) : (
+                            <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                          )}
+                          <button
+                            onClick={() => deleteWeeklyGoal.mutate({ id: row.id })}
+                            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-0.5 ml-1"
+                            title="Eliminar"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Leyenda */}
+                <div className="flex items-center gap-4 px-3 py-2 bg-muted/30 border-t text-[10px] text-muted-foreground">
+                  <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-600" /> Objetivo cumplido</span>
+                  <span className="flex items-center gap-1"><AlertCircle className="w-3 h-3 text-red-500" /> Por encima</span>
+                  <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> Pendiente</span>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </section>
 
       {/* Gráfica */}
       {chartData.length > 1 && (
@@ -313,7 +537,7 @@ export default function WeightTracker() {
             <p className="text-sm text-muted-foreground mb-4">Aún no has registrado ningún peso.</p>
             <Button size="sm" onClick={() => setWeightOpen(true)} className="gap-1.5">
               <Plus className="w-4 h-4" />
-              Registrar primer peso
+              Registrar peso
             </Button>
           </div>
         ) : (
@@ -458,7 +682,7 @@ export default function WeightTracker() {
         </DialogContent>
       </Dialog>
 
-      {/* Añadir objetivo */}
+      {/* Añadir objetivo a largo plazo */}
       <Dialog open={goalOpen} onOpenChange={setGoalOpen}>
         <DialogContent className="max-w-sm w-[95vw]">
           <DialogHeader>
@@ -510,6 +734,154 @@ export default function WeightTracker() {
                 })}
               >
                 {addGoal.isPending ? "Guardando..." : "Guardar"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Añadir objetivo semanal manual */}
+      <Dialog open={weeklyGoalOpen} onOpenChange={setWeeklyGoalOpen}>
+        <DialogContent className="max-w-sm w-[95vw]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarDays className="w-4 h-4 text-primary" />
+              Objetivo semanal
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="text-sm font-medium">Fecha de pesaje *</Label>
+              <Input
+                type="date"
+                value={weeklyGoalForm.weekDate}
+                onChange={(e) => setWeeklyGoalForm((f) => ({ ...f, weekDate: e.target.value }))}
+                className="mt-1.5"
+                autoFocus
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Peso objetivo (kg) *</Label>
+              <Input
+                type="number"
+                step="0.1"
+                min="30"
+                max="300"
+                value={weeklyGoalForm.targetWeight}
+                onChange={(e) => setWeeklyGoalForm((f) => ({ ...f, targetWeight: e.target.value }))}
+                className="mt-1.5 text-lg font-semibold h-12"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Notas (opcional)</Label>
+              <Input
+                value={weeklyGoalForm.notes}
+                onChange={(e) => setWeeklyGoalForm((f) => ({ ...f, notes: e.target.value }))}
+                className="mt-1.5"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setWeeklyGoalOpen(false)}>Cancelar</Button>
+              <Button
+                className="flex-1"
+                disabled={!weeklyGoalForm.weekDate || !weeklyGoalForm.targetWeight || upsertWeeklyGoal.isPending}
+                onClick={() => upsertWeeklyGoal.mutate({
+                  weekDate: weeklyGoalForm.weekDate,
+                  targetWeight: parseFloat(weeklyGoalForm.targetWeight),
+                  notes: weeklyGoalForm.notes || undefined,
+                })}
+              >
+                {upsertWeeklyGoal.isPending ? "Guardando..." : "Guardar"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Generar objetivos semanales automáticamente */}
+      <Dialog open={generateOpen} onOpenChange={setGenerateOpen}>
+        <DialogContent className="max-w-sm w-[95vw]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              Generar objetivos semanales
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-xs text-muted-foreground">
+              Genera automáticamente una tabla de objetivos de peso semanales interpolando entre el peso inicial y el objetivo final.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-sm font-medium">Fecha inicio *</Label>
+                <Input
+                  type="date"
+                  value={generateForm.startDate}
+                  onChange={(e) => setGenerateForm((f) => ({ ...f, startDate: e.target.value }))}
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Peso inicio (kg) *</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={generateForm.startWeight}
+                  onChange={(e) => setGenerateForm((f) => ({ ...f, startWeight: e.target.value }))}
+                  className="mt-1.5"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-sm font-medium">Fecha fin *</Label>
+                <Input
+                  type="date"
+                  value={generateForm.endDate}
+                  onChange={(e) => setGenerateForm((f) => ({ ...f, endDate: e.target.value }))}
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Peso objetivo (kg) *</Label>
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={generateForm.endWeight}
+                  onChange={(e) => setGenerateForm((f) => ({ ...f, endWeight: e.target.value }))}
+                  className="mt-1.5"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Intervalo (días)</Label>
+              <div className="flex gap-2 mt-1.5">
+                {["7", "14"].map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => setGenerateForm((f) => ({ ...f, intervalDays: d }))}
+                    className={`flex-1 py-2 rounded-xl border-2 text-sm font-medium transition-all
+                      ${generateForm.intervalDays === d ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40"}`}
+                  >
+                    {d === "7" ? "Semanal (7d)" : "Quincenal (14d)"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setGenerateOpen(false)}>Cancelar</Button>
+              <Button
+                className="flex-1"
+                disabled={!generateForm.startDate || !generateForm.startWeight || !generateForm.endDate || !generateForm.endWeight || generateWeeklyGoals.isPending}
+                onClick={() => generateWeeklyGoals.mutate({
+                  startDate: generateForm.startDate,
+                  startWeight: parseFloat(generateForm.startWeight),
+                  endDate: generateForm.endDate,
+                  endWeight: parseFloat(generateForm.endWeight),
+                  intervalDays: parseInt(generateForm.intervalDays),
+                })}
+              >
+                {generateWeeklyGoals.isPending ? "Generando..." : "Generar"}
               </Button>
             </div>
           </div>

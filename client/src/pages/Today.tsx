@@ -25,27 +25,25 @@ import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Link } from "wouter";
 
-// Devuelve YYYY-MM-DD usando componentes UTC.
-// Las fechas en la BD se almacenan como DATE (YYYY-MM-DD) a medianoche UTC,
-// por lo que comparamos siempre en UTC para evitar desfases de zona horaria.
-function formatDate(d: Date) {
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
+// Devuelve YYYY-MM-DD usando la fecha LOCAL del navegador.
+// Se usa para determinar qué día es "hoy" según la zona horaria del usuario.
+function formatLocalDate(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 
 // Extrae la fecha de un valor que puede venir como Date o string desde la BD.
-// Las fechas se almacenan como DATE en MySQL (YYYY-MM-DD) y Drizzle las devuelve como
-// Date con hora 00:00:00 UTC. Usamos getUTC* para obtener el día correcto sin desfase.
-function extractLocalDate(d: Date | string): string {
+// Las fechas se almacenan como DATE en MySQL (YYYY-MM-DD) a medianoche UTC.
+// Usamos getUTC* para obtener el día correcto tal como se guardó en la BD.
+function extractDbDate(d: Date | string): string {
   if (d instanceof Date) {
     const y = d.getUTCFullYear();
     const m = String(d.getUTCMonth() + 1).padStart(2, "0");
     const day = String(d.getUTCDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
   }
-  // Si es string, puede ser "2026-02-21T00:00:00.000Z" o "2026-02-21"
   const s = String(d);
   return s.slice(0, 10);
 }
@@ -54,12 +52,13 @@ export default function Today() {
   const { user, isAuthenticated } = useAuth();
   const [dayOffset, setDayOffset] = useState(0);
   const today = new Date();
-  const todayStr = formatDate(today);
+  // Usamos fecha LOCAL del navegador para saber qué día es "hoy" para el usuario
+  const todayStr = formatLocalDate(today);
   const viewDate = addDays(today, dayOffset);
-  const viewDateStr = formatDate(viewDate);
+  const viewDateStr = formatLocalDate(viewDate);
   // Cargamos desde 14 días atrás hasta 14 días adelante para poder navegar
-  const from = formatDate(addDays(today, -14));
-  const to = formatDate(addDays(today, 14));
+  const from = formatLocalDate(addDays(today, -14));
+  const to = formatLocalDate(addDays(today, 14));
 
   const { data: scheduled, refetch } = trpc.menu.listScheduledDays.useQuery({ from, to });
   const { data: weightLogs } = trpc.health.listWeightLogs.useQuery();
@@ -89,14 +88,13 @@ export default function Today() {
   }
 
   const todayScheduled = scheduled?.filter((s) => {
-    const dateStr = extractLocalDate(s.scheduled.scheduledDate);
+    const dateStr = extractDbDate(s.scheduled.scheduledDate);
     return dateStr === viewDateStr;
   });
-
   const upcomingScheduled = scheduled?.filter((s) => {
-    const dateStr = extractLocalDate(s.scheduled.scheduledDate);
+    const dateStr = extractDbDate(s.scheduled.scheduledDate);
     return dateStr > viewDateStr;
-  });
+  });;
 
   const latestWeight = weightLogs && weightLogs.length > 0 ? weightLogs[weightLogs.length - 1] : null;
   const pendingShopping = shoppingItems?.filter((i) => !i.isPurchased).length ?? 0;
@@ -404,7 +402,7 @@ interface DayMenuCardProps {
 
 function DayMenuCard({ scheduled, isToday, onStatusChange, onAddToShoppingList }: DayMenuCardProps) {
   const { scheduled: s, menu } = scheduled;
-  const dateStr = extractLocalDate(s.scheduledDate);
+  const dateStr = extractDbDate(s.scheduledDate);
   const date = new Date(dateStr + "T12:00:00");
 
   const [lunchDone, setLunchDone] = useState(s.lunchCompleted ?? false);

@@ -63,5 +63,9 @@
 - [ ] Modo oscuro
 - [ ] Versión PWA para móvil
 
-## Bug activo v2.4
-- [ ] Bug crítico: página Hoy sigue mostrando el menú del día siguiente (zona horaria UTC vs local, persiste)
+## Mejoras v2.5 (completadas)
+- [x] Bug crítico: corregir bug zona horaria en Today.tsx (usar fecha local del navegador para "hoy", UTC para comparar con BD)
+- [x] Bug: eliminar getShoppingList duplicado en db.ts (causa error de esbuild)
+- [x] Mejora: objetivos semanales de peso (tabla con fecha, objetivo semanal, peso real, kg perdidos semana, estado vs objetivo)
+- [x] Mejora: tabla de seguimiento semanal en Control de Peso con generación automática de objetivos
+- [x] Mejora: router tRPC para weeklyGoals (listWeeklyGoals, upsertWeeklyGoal, deleteWeeklyGoal, generateWeeklyGoals)

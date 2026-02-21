@@ -5,14 +5,18 @@ import {
   addWeightGoal,
   addWeightLog,
   deleteActivityLog,
+  deleteWeeklyGoal,
   deleteWeightGoal,
   deleteWeightLog,
+  generateWeeklyGoals,
   getActivityLogs,
+  getWeeklyGoals,
   getWeightGoals,
   getWeightLogs,
   getWeightStats,
   updateUserProfile,
   updateWeightLog,
+  upsertWeeklyGoal,
 } from "../db";
 
 export const healthRouter = router({
@@ -59,7 +63,7 @@ export const healthRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(({ input }) => deleteWeightLog(input.id)),
 
-  // ─── Objetivos de peso ──────────────────────────────────────────────────────
+  // ─── Objetivos de peso (hitos) ──────────────────────────────────────────────
   listWeightGoals: protectedProcedure.query(({ ctx }) => getWeightGoals(ctx.user.id)),
 
   addWeightGoal: protectedProcedure
@@ -82,6 +86,51 @@ export const healthRouter = router({
   deleteWeightGoal: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(({ input }) => deleteWeightGoal(input.id)),
+
+  // ─── Objetivos semanales ────────────────────────────────────────────────────
+  listWeeklyGoals: protectedProcedure.query(({ ctx }) => getWeeklyGoals(ctx.user.id)),
+
+  upsertWeeklyGoal: protectedProcedure
+    .input(
+      z.object({
+        weekDate: z.string(), // YYYY-MM-DD
+        targetWeight: z.number().positive(),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(({ ctx, input }) =>
+      upsertWeeklyGoal({
+        userId: ctx.user.id,
+        weekDate: new Date(input.weekDate + "T12:00:00Z") as unknown as Date,
+        targetWeight: input.targetWeight,
+        notes: input.notes ?? null,
+      })
+    ),
+
+  deleteWeeklyGoal: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(({ input }) => deleteWeeklyGoal(input.id)),
+
+  generateWeeklyGoals: protectedProcedure
+    .input(
+      z.object({
+        startDate: z.string(),
+        startWeight: z.number().positive(),
+        endDate: z.string(),
+        endWeight: z.number().positive(),
+        intervalDays: z.number().min(1).max(30).default(7),
+      })
+    )
+    .mutation(({ ctx, input }) =>
+      generateWeeklyGoals(
+        ctx.user.id,
+        input.startDate,
+        input.startWeight,
+        input.endDate,
+        input.endWeight,
+        input.intervalDays
+      )
+    ),
 
   // ─── Actividad física ───────────────────────────────────────────────────────
   listActivityLogs: protectedProcedure.query(({ ctx }) => getActivityLogs(ctx.user.id)),

@@ -11,6 +11,7 @@ import {
   scheduledDays,
   shoppingList,
   users,
+  weeklyGoals,
   weightGoals,
   weightLogs,
   type InsertActivityLog,
@@ -21,6 +22,7 @@ import {
   type InsertRecipe,
   type InsertScheduledDay,
   type InsertShoppingItem,
+  type InsertWeeklyGoal,
   type InsertWeightGoal,
   type InsertWeightLog,
 } from "../drizzle/schema";
@@ -455,4 +457,58 @@ export async function getWeightStats(userId: number) {
     weeklyStats,
     logs,
   };
+}
+
+// ─── Objetivos Semanales ──────────────────────────────────────────────────────
+export async function getWeeklyGoals(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(weeklyGoals).where(eq(weeklyGoals.userId, userId)).orderBy(weeklyGoals.weekDate);
+}
+
+export async function upsertWeeklyGoal(data: InsertWeeklyGoal) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  // Si ya existe un objetivo para esa semana y usuario, actualizar; si no, insertar
+  const existing = await db.select().from(weeklyGoals)
+    .where(and(eq(weeklyGoals.userId, data.userId), eq(weeklyGoals.weekDate, data.weekDate)))
+    .limit(1);
+  if (existing.length > 0) {
+    await db.update(weeklyGoals).set({ targetWeight: data.targetWeight, notes: data.notes })
+      .where(eq(weeklyGoals.id, existing[0].id));
+    return existing[0].id;
+  }
+  const result = await db.insert(weeklyGoals).values(data);
+  return Number(result[0].insertId);
+}
+
+export async function deleteWeeklyGoal(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(weeklyGoals).where(eq(weeklyGoals.id, id));
+}
+
+export async function generateWeeklyGoals(userId: number, startDate: string, startWeight: number, endDate: string, endWeight: number, intervalDays: number = 7) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const start = new Date(startDate + "T12:00:00Z");
+  const end = new Date(endDate + "T12:00:00Z");
+  const totalDays = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
+  const totalWeeks = Math.ceil(totalDays / intervalDays);
+  const weeklyLoss = (startWeight - endWeight) / totalWeeks;
+
+  const goals: InsertWeeklyGoal[] = [];
+  for (let i = 0; i <= totalWeeks; i++) {
+    const weekMs = start.getTime() + i * intervalDays * 24 * 60 * 60 * 1000;
+    const weekD = new Date(weekMs);
+    const weekStr = `${weekD.getUTCFullYear()}-${String(weekD.getUTCMonth() + 1).padStart(2, "0")}-${String(weekD.getUTCDate()).padStart(2, "0")}`;
+    const target = Math.round((startWeight - i * weeklyLoss) * 10) / 10;
+    goals.push({ userId, weekDate: new Date(weekStr + "T12:00:00Z"), targetWeight: target });
+  }
+
+  // Insertar todos de golpe (ignorar duplicados)
+  for (const g of goals) {
+    await upsertWeeklyGoal(g);
+  }
+  return goals.length;
 }

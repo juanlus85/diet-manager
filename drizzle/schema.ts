@@ -203,3 +203,18 @@ export const dietUploads = mysqlTable("diet_uploads", {
 
 export type DietUpload = typeof dietUploads.$inferSelect;
 export type InsertDietUpload = typeof dietUploads.$inferInsert;
+
+// ─── Objetivos Semanales de Peso ─────────────────────────────────────────────
+// Cada fila representa una semana con su objetivo de peso esperado.
+// Se puede rellenar manualmente o generar automáticamente interpolando entre
+// el peso inicial y el objetivo final.
+export const weeklyGoals = mysqlTable("weekly_goals", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  weekDate: date("weekDate").notNull(), // Fecha del lunes (o día de pesaje) de esa semana
+  targetWeight: float("targetWeight").notNull(), // Objetivo de peso para esa semana
+  notes: varchar("notes", { length: 255 }), // Comentarios opcionales (ej. "Semana Santa", "Cumpleaños")
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type WeeklyGoal = typeof weeklyGoals.$inferSelect;
+export type InsertWeeklyGoal = typeof weeklyGoals.$inferInsert;
