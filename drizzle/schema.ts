@@ -18,6 +18,7 @@ export const users = mysqlTable("users", {
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
+  passwordHash: text("passwordHash"), // Para autenticación local (VPS sin Manus OAuth)
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   // Perfil de salud
   targetWeight: float("targetWeight"),

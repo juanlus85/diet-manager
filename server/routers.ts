@@ -6,17 +6,11 @@ import { menuRouter } from "./routers/menu";
 import { healthRouter } from "./routers/health";
 import { recipesRouter } from "./routers/recipes";
 import { dietUploadRouter } from "./routers/dietUpload";
-
+import { localAuthRouter } from "./routers/localAuth";
 export const appRouter = router({
   system: systemRouter,
-  auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return { success: true } as const;
-    }),
-  }),
+  // auth: incluye tanto el login local como el me/logout compatible con el frontend existente
+  auth: localAuthRouter,
   menu: menuRouter,
   health: healthRouter,
   recipes: recipesRouter,

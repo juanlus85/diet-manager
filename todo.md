@@ -75,3 +75,11 @@
 
 ## Bug corregido v2.7
 - [x] Bug corregido: el calendario usaba getUTCDate() para construir las fechas de las columnas. En España (UTC+1), startOfWeek devuelve el lunes a las 00:00 CET = 23:00 UTC del día anterior, por lo que getUTCDate() devolvía el día anterior. Solución: cambiar formatDate() en Calendar.tsx para usar getFullYear/getMonth/getDate (hora local del navegador) en lugar de getUTC*.
+
+## Adaptación VPS (v3.0)
+- [x] Schema: añadir campo passwordHash a tabla users
+- [x] Backend: router de autenticación local (registro/login/logout con bcrypt + JWT)
+- [x] Backend: LLM configurable con OPENAI_API_KEY (compatible con OpenAI y Manus)
+- [x] Frontend: página de login/registro con formulario usuario/contraseña
+- [x] Frontend: eliminar dependencia de Manus OAuth (VITE_OAUTH_PORTAL_URL)
+- [x] Tests: actualizar tests de autenticación (12/12 pasando)

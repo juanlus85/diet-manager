@@ -18,11 +18,10 @@ import {
   SidebarProvider,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { getLoginUrl } from "@/const";
+import LoginPage from "@/pages/Login";
 import { useIsMobile } from "@/hooks/useMobile";
 import {
   CalendarDays,
-  ChefHat,
   LayoutDashboard,
   LogOut,
   PanelLeft,
@@ -79,26 +78,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (loading) return <DashboardLayoutSkeleton />;
 
   if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="flex flex-col items-center gap-8 p-8 max-w-sm w-full">
-          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center">
-            <ChefHat className="w-8 h-8 text-primary" />
-          </div>
-          <div className="text-center">
-            <h1 className="text-xl font-bold mb-2">Gestor de Dieta</h1>
-            <p className="text-sm text-muted-foreground">Inicia sesión para acceder a tu dieta personalizada.</p>
-          </div>
-          <Button
-            onClick={() => { window.location.href = getLoginUrl(); }}
-            size="lg"
-            className="w-full"
-          >
-            Iniciar sesión
-          </Button>
-        </div>
-      </div>
-    );
+    return <LoginPage />;
   }
 
   return (

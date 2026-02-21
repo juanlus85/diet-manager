@@ -279,8 +279,10 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     response_format,
   } = params;
 
+  // Modelo configurable: OPENAI_MODEL o LLM_MODEL en .env (por defecto gpt-4o-mini)
+  const model = process.env.OPENAI_MODEL || process.env.LLM_MODEL || "gpt-4o-mini";
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
+    model,
     messages: messages.map(normalizeMessage),
   };
 
@@ -296,9 +298,9 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.tool_choice = normalizedToolChoice;
   }
 
-  payload.max_tokens = 32768
-  payload.thinking = {
-    "budget_tokens": 128
+  // Solo añadir max_tokens para modelos que lo soporten
+  if (!model.startsWith("o1") && !model.startsWith("o3")) {
+    payload.max_tokens = 4096;
   }
 
   const normalizedResponseFormat = normalizeResponseFormat({
