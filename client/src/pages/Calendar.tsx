@@ -36,6 +36,8 @@ export default function Calendar() {
   const [selectedMenuId, setSelectedMenuId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [menuPage, setMenuPage] = useState(0);
+  type ScheduledItem = NonNullable<typeof scheduled>[0];
+  const [detailItem, setDetailItem] = useState<ScheduledItem | null>(null);
 
   const from = formatDate(weekStart);
   const to = formatDate(addDays(weekStart, 6));
@@ -180,8 +182,9 @@ export default function Calendar() {
                   <div
                     key={s.scheduled.id}
                     draggable
-                    onDragStart={() => handleDragStart(s.scheduled.id)}
-                    className={`group relative rounded-xl border bg-background p-2.5 cursor-grab shadow-sm hover:shadow-md transition-all active:cursor-grabbing
+                    onDragStart={(e) => { e.stopPropagation(); handleDragStart(s.scheduled.id); }}
+                    onClick={() => setDetailItem(s)}
+                    className={`group relative rounded-xl border bg-background p-2.5 cursor-pointer shadow-sm hover:shadow-md hover:border-primary/40 transition-all active:scale-[0.98]
                       ${draggedId === s.scheduled.id ? "opacity-40 scale-95" : ""}
                       ${s.scheduled.status === "completed" ? "opacity-60 bg-green-50/80 border-green-200" : ""}
                     `}
@@ -361,6 +364,110 @@ export default function Calendar() {
               {scheduleDay.isPending ? "Programando..." : "Programar"}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog detalle del día */}
+      <Dialog open={!!detailItem} onOpenChange={(open) => { if (!open) setDetailItem(null); }}>
+        <DialogContent className="max-w-md w-[95vw] max-h-[90vh] overflow-y-auto p-0 gap-0">
+          {detailItem && (
+            <>
+              <DialogHeader className="px-4 pt-4 pb-3 border-b">
+                <DialogTitle className="text-base capitalize">
+                  {format(new Date((
+                    detailItem.scheduled.scheduledDate instanceof Date
+                      ? detailItem.scheduled.scheduledDate.toISOString()
+                      : String(detailItem.scheduled.scheduledDate)
+                  ).slice(0, 10) + "T12:00:00"), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
+                </DialogTitle>
+                {detailItem.scheduled.status === "completed" && (
+                  <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full w-fit">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Completado
+                  </span>
+                )}
+              </DialogHeader>
+              <div className="p-4 space-y-4">
+                {/* Desayuno */}
+                {detailItem.menu?.breakfast && (
+                  <div className="rounded-xl bg-amber-50 border border-amber-200 p-3">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Coffee className="w-4 h-4 text-amber-600" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-700">Desayuno</span>
+                    </div>
+                    <p className="text-sm text-foreground">{detailItem.menu.breakfast}</p>
+                  </div>
+                )}
+                {/* Almuerzo */}
+                {detailItem.menu && (
+                  <div className="rounded-xl bg-orange-50 border border-orange-200 p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sun className="w-4 h-4 text-orange-600" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-orange-700">Almuerzo</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-2">
+                        <span className="text-xs font-bold text-orange-400 w-5 shrink-0 mt-0.5">1°</span>
+                        <p className="text-sm font-medium text-foreground leading-snug">{detailItem.menu.lunch1}</p>
+                      </div>
+                      {detailItem.menu.lunch2 && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-xs font-bold text-orange-400 w-5 shrink-0 mt-0.5">2°</span>
+                          <p className="text-sm font-medium text-foreground leading-snug">{detailItem.menu.lunch2}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {/* Cena */}
+                {detailItem.menu && (
+                  <div className="rounded-xl bg-indigo-50 border border-indigo-200 p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Moon className="w-4 h-4 text-indigo-600" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-indigo-700">Cena</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-2">
+                        <span className="text-xs font-bold text-indigo-400 w-5 shrink-0 mt-0.5">1°</span>
+                        <p className="text-sm font-medium text-foreground leading-snug">{detailItem.menu.dinner1}</p>
+                      </div>
+                      {detailItem.menu.dinner2 && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-xs font-bold text-indigo-400 w-5 shrink-0 mt-0.5">2°</span>
+                          <p className="text-sm font-medium text-foreground leading-snug">{detailItem.menu.dinner2}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                {/* Notas */}
+                {detailItem.scheduled.notes && (
+                  <div className="rounded-xl bg-muted/40 border border-border p-3">
+                    <p className="text-xs font-semibold text-muted-foreground mb-1">Notas</p>
+                    <p className="text-sm text-foreground">{detailItem.scheduled.notes}</p>
+                  </div>
+                )}
+                {/* Acciones */}
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-destructive border-destructive/30 hover:bg-destructive/5"
+                    onClick={() => {
+                      deleteScheduled.mutate({ id: detailItem.scheduled.id });
+                      setDetailItem(null);
+                    }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                    Eliminar
+                  </Button>
+                  <Button size="sm" className="flex-1" onClick={() => setDetailItem(null)}>
+                    Cerrar
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>

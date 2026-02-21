@@ -133,7 +133,7 @@ export default function MenuHistory() {
                   <div>
                     <p className="text-xs text-muted-foreground font-medium">Almuerzo</p>
                     <p className="text-sm font-medium leading-tight">{menu.lunch1}</p>
-                    {menu.lunch2 && <p className="text-xs text-muted-foreground">{menu.lunch2}</p>}
+                    {menu.lunch2 && <p className="text-sm font-medium leading-tight mt-0.5">{menu.lunch2}</p>}
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
@@ -141,7 +141,7 @@ export default function MenuHistory() {
                   <div>
                     <p className="text-xs text-muted-foreground font-medium">Cena</p>
                     <p className="text-sm font-medium leading-tight">{menu.dinner1}</p>
-                    {menu.dinner2 && <p className="text-xs text-muted-foreground">{menu.dinner2}</p>}
+                    {menu.dinner2 && <p className="text-sm font-medium leading-tight mt-0.5">{menu.dinner2}</p>}
                   </div>
                 </div>
                 {menu.notes && (

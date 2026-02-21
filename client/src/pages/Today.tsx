@@ -25,15 +25,36 @@ import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Link } from "wouter";
 
+// Devuelve YYYY-MM-DD usando la fecha LOCAL del navegador (evita desfase UTC)
 function formatDate(d: Date) {
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+// Extrae la fecha local de un valor que puede venir como Date o string desde la BD
+function extractLocalDate(d: Date | string): string {
+  if (d instanceof Date) {
+    // La BD devuelve fechas en UTC; ajustamos al offset local para obtener el día correcto
+    const local = new Date(d.getTime() + d.getTimezoneOffset() * -60000);
+    return formatDate(local);
+  }
+  // Si es string, puede ser "2026-02-21T00:00:00.000Z" o "2026-02-21"
+  const s = String(d);
+  return s.slice(0, 10);
 }
 
 export default function Today() {
   const { user, isAuthenticated } = useAuth();
+  const [dayOffset, setDayOffset] = useState(0);
   const today = new Date();
-  const from = formatDate(today);
-  const to = formatDate(addDays(today, 13));
+  const todayStr = formatDate(today);
+  const viewDate = addDays(today, dayOffset);
+  const viewDateStr = formatDate(viewDate);
+  // Cargamos desde 14 días atrás hasta 14 días adelante para poder navegar
+  const from = formatDate(addDays(today, -14));
+  const to = formatDate(addDays(today, 14));
 
   const { data: scheduled, refetch } = trpc.menu.listScheduledDays.useQuery({ from, to });
   const { data: weightLogs } = trpc.health.listWeightLogs.useQuery();
@@ -63,15 +84,13 @@ export default function Today() {
   }
 
   const todayScheduled = scheduled?.filter((s) => {
-    const d = s.scheduled.scheduledDate;
-    const dateStr = d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10);
-    return dateStr === from;
+    const dateStr = extractLocalDate(s.scheduled.scheduledDate);
+    return dateStr === viewDateStr;
   });
 
   const upcomingScheduled = scheduled?.filter((s) => {
-    const d = s.scheduled.scheduledDate;
-    const dateStr = d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10);
-    return dateStr > from;
+    const dateStr = extractLocalDate(s.scheduled.scheduledDate);
+    return dateStr > viewDateStr;
   });
 
   const latestWeight = weightLogs && weightLogs.length > 0 ? weightLogs[weightLogs.length - 1] : null;
@@ -125,11 +144,34 @@ export default function Today() {
         />
       </div>
 
-      {/* Menú de hoy */}
+      {/* Menú del día con navegación */}
       <section>
-        <div className="flex items-center gap-2 mb-3">
-          <Sun className="w-5 h-5 text-yellow-500" />
-          <h2 className="text-base font-bold">Menú de hoy</h2>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Sun className="w-5 h-5 text-yellow-500" />
+            <h2 className="text-base font-bold">
+              {dayOffset === 0
+                ? "Menú de hoy"
+                : dayOffset === 1
+                ? "Mañana"
+                : dayOffset === -1
+                ? "Ayer"
+                : format(viewDate, "d 'de' MMMM", { locale: es })}
+            </h2>
+          </div>
+          <div className="flex items-center gap-0.5">
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-lg" onClick={() => setDayOffset((o) => o - 1)}>
+              ‹
+            </Button>
+            {dayOffset !== 0 && (
+              <Button variant="ghost" size="sm" className="h-8 text-xs px-2" onClick={() => setDayOffset(0)}>
+                Hoy
+              </Button>
+            )}
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-lg" onClick={() => setDayOffset((o) => o + 1)}>
+              ›
+            </Button>
+          </div>
         </div>
 
         {!todayScheduled || todayScheduled.length === 0 ? (
@@ -258,6 +300,7 @@ function MealBlock({
   completed,
   onComplete,
   onAddIngredient,
+  showIngredients = true,
 }: {
   icon: React.ReactNode;
   iconColor: string;
@@ -269,6 +312,7 @@ function MealBlock({
   completed: boolean;
   onComplete: () => void;
   onAddIngredient: (item: string) => void;
+  showIngredients?: boolean;
 }) {
   return (
     <div className={`rounded-xl border ${borderColor} ${bgColor} p-3.5 transition-all ${completed ? "opacity-60" : ""}`}>
@@ -314,13 +358,15 @@ function MealBlock({
       </div>
 
       {/* Ingredientes / añadir a la compra */}
-      <div>
-        <p className="text-xs text-muted-foreground mb-1.5">Toca para añadir a la compra:</p>
-        <div className="flex flex-wrap gap-1.5">
-          <IngredientChip text={line1} onAdd={() => onAddIngredient(line1)} />
-          {line2 && <IngredientChip text={line2} onAdd={() => onAddIngredient(line2!)} />}
+      {showIngredients && (
+        <div>
+          <p className="text-xs text-muted-foreground mb-1.5">Toca para añadir a la compra:</p>
+          <div className="flex flex-wrap gap-1.5">
+            <IngredientChip text={line1} onAdd={() => onAddIngredient(line1)} />
+            {line2 && <IngredientChip text={line2} onAdd={() => onAddIngredient(line2!)} />}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -353,12 +399,13 @@ interface DayMenuCardProps {
 
 function DayMenuCard({ scheduled, isToday, onStatusChange, onAddToShoppingList }: DayMenuCardProps) {
   const { scheduled: s, menu } = scheduled;
-  const dateVal = s.scheduledDate;
-  const dateStr = dateVal instanceof Date ? dateVal.toISOString().slice(0, 10) : String(dateVal).slice(0, 10);
+  const dateStr = extractLocalDate(s.scheduledDate);
   const date = new Date(dateStr + "T12:00:00");
 
   const [lunchDone, setLunchDone] = useState(s.lunchCompleted ?? false);
   const [dinnerDone, setDinnerDone] = useState(s.dinnerCompleted ?? false);
+  // En días próximos, los ingredientes empiezan colapsados
+  const [showIngredients, setShowIngredients] = useState(isToday);
 
   const handleLunchComplete = () => {
     const next = !lunchDone;
@@ -374,6 +421,19 @@ function DayMenuCard({ scheduled, isToday, onStatusChange, onAddToShoppingList }
     else if (!next) onStatusChange("pending");
   };
 
+  // Recoge todos los ingredientes del día para añadirlos de golpe
+  const allIngredients = [
+    menu?.lunch1,
+    menu?.lunch2,
+    menu?.dinner1,
+    menu?.dinner2,
+  ].filter(Boolean) as string[];
+
+  const handleAddAll = () => {
+    allIngredients.forEach((ing) => onAddToShoppingList(ing));
+    toast.success(`✓ ${allIngredients.length} ingredientes añadidos a la compra`);
+  };
+
   return (
     <div
       className={`rounded-2xl border overflow-hidden transition-all
@@ -382,18 +442,32 @@ function DayMenuCard({ scheduled, isToday, onStatusChange, onAddToShoppingList }
       `}
     >
       {/* Cabecera del día */}
-      <div className={`px-4 py-3 flex items-center justify-between ${isToday ? "bg-primary/8" : "bg-muted/30"}`}>
-        <div className="flex items-center gap-2">
+      <div className={`px-4 py-3 flex items-center justify-between gap-2 ${isToday ? "bg-primary/8" : "bg-muted/30"}`}>
+        <div className="flex items-center gap-2 min-w-0">
           {isToday && (
-            <span className="bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full">HOY</span>
+            <span className="bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full shrink-0">HOY</span>
           )}
-          <span className="font-semibold text-sm capitalize">
+          <span className="font-semibold text-sm capitalize truncate">
             {format(date, "EEEE, d 'de' MMMM", { locale: es })}
           </span>
         </div>
-        {s.status === "completed" && (
-          <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
-        )}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Botón añadir todo a la compra */}
+          {menu && allIngredients.length > 0 && (
+            <button
+              onClick={handleAddAll}
+              className="flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-orange-50 border border-orange-200 text-orange-700 hover:bg-orange-100 active:scale-95 transition-all"
+              title="Añadir todos los ingredientes del día a la lista de la compra"
+            >
+              <ShoppingCart className="w-3 h-3" />
+              <span className="hidden sm:inline">Todo a la compra</span>
+              <span className="sm:hidden">Compra</span>
+            </button>
+          )}
+          {s.status === "completed" && (
+            <CheckCircle2 className="w-5 h-5 text-green-600" />
+          )}
+        </div>
       </div>
 
       {/* Contenido */}
@@ -423,6 +497,7 @@ function DayMenuCard({ scheduled, isToday, onStatusChange, onAddToShoppingList }
               completed={lunchDone}
               onComplete={handleLunchComplete}
               onAddIngredient={onAddToShoppingList}
+              showIngredients={showIngredients}
             />
 
             {/* Cena */}
@@ -437,7 +512,19 @@ function DayMenuCard({ scheduled, isToday, onStatusChange, onAddToShoppingList }
               completed={dinnerDone}
               onComplete={handleDinnerComplete}
               onAddIngredient={onAddToShoppingList}
+              showIngredients={showIngredients}
             />
+
+            {/* Botón mostrar/ocultar ingredientes (solo en días próximos) */}
+            {!isToday && (
+              <button
+                onClick={() => setShowIngredients((v) => !v)}
+                className="w-full flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground py-1 transition-colors"
+              >
+                <ShoppingBag className="w-3.5 h-3.5" />
+                {showIngredients ? "Ocultar ingredientes" : "Ver ingredientes para la compra"}
+              </button>
+            )}
 
             {/* Estado global */}
             {s.status !== "completed" && (

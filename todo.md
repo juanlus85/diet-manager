@@ -15,6 +15,7 @@
 ## Frontend - Layout y estilos
 - [x] Tema visual (verde salud, tipografía moderna, responsive)
 - [x] DashboardLayout con sidebar de navegación
+- [x] Bottom navigation bar en móvil
 - [x] Rutas en App.tsx
 
 ## Frontend - Páginas
@@ -39,29 +40,25 @@
 ## Tests
 - [x] Tests vitest para routers principales (12 tests, todos pasan)
 
+## Mejoras v2 (completadas)
+- [x] Página Hoy: 1° y 2° plato con etiqueta clara y mismo tamaño visual
+- [x] Página Hoy: tap/hover sobre ingredientes → añadir a lista de la compra
+- [x] Página Hoy: marcar almuerzo/cena completados por separado
+- [x] Página Hoy: navegación de días (flechas anterior/siguiente + botón "Hoy")
+- [x] Calendario: lista vertical en móvil, cuadrícula en desktop
+- [x] Calendario: click en menú abre panel de detalle completo del día
+- [x] Calendario: selector de menús con búsqueda y paginación
+- [x] Control de Peso: sin placeholder en el input de peso
+- [x] Control de Peso: análisis completo de objetivos (kg perdidos, kg restantes, días, % logrado)
+- [x] Recetas: campo "tipo de comida" eliminado del formulario
+- [x] Lista de la compra: panel lateral con menús pendientes (almuerzo/cena sin fecha)
+- [x] Bug: zona horaria UTC vs local corregida en Today.tsx y db.ts
+- [x] Bug: db.ts duplicado de getShoppingList eliminado
+- [x] Bug visual: 2° plato igualado al 1° en todos los componentes
+
 ## Pendiente / Mejoras futuras
 - [ ] Exportar lista de la compra a PDF
 - [ ] Notificaciones push para recordar registrar el peso
 - [ ] Importar datos históricos desde Excel/CSV
 - [ ] Modo oscuro
 - [ ] Versión PWA para móvil
-
-## Mejoras v2 (completadas)
-- [x] Página Hoy: mejorar claridad visual de primer y segundo plato (1° y 2° con etiqueta clara)
-- [x] Página Hoy: tap/hover sobre ingredientes → tooltip "Añadir a lista de la compra"
-- [x] Página Hoy: marcar almuerzo/cena con "todos los ingredientes disponibles"
-- [x] Página Hoy: marcar comida como completada (almuerzo y cena por separado)
-- [x] Calendario: lista vertical en móvil, cuadrícula en desktop, celdas más grandes
-- [x] Calendario: drag & drop entre días
-- [x] Calendario: selector de menús con búsqueda y paginación, muestra todos los platos
-- [x] Control de Peso: sin placeholder en el input de peso
-- [x] Control de Peso: análisis completo de objetivos (kg perdidos, kg restantes, días, % logrado, ritmo necesario)
-- [x] Recetas: campo "tipo de comida" eliminado del formulario
-
-## Mejoras mobile-first (v2.1 completadas)
-- [x] DayMenuCard: tarjetas separadas almuerzo/cena con colores diferenciados (naranja/índigo)
-- [x] Chips de ingredientes con tooltip y tap para añadir a la compra
-- [x] Botones touch-friendly para marcar almuerzo y cena completados
-- [x] Bottom navigation bar en móvil + sidebar en desktop
-- [x] Tipografía y espaciado optimizados (font-size 16px en inputs para evitar zoom en iOS)
-- [x] Calendario: lista vertical en móvil con días más grandes y legibles

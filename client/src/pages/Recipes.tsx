@@ -58,7 +58,7 @@ export default function Recipes() {
     r.mealType.toLowerCase().includes(search.toLowerCase())
   );
 
-  const filteredIngredients = ingredients?.filter((i) =>
+  const filteredIngredients = ingredients?.filter((i: { name: string; category?: string | null }) =>
     i.name.toLowerCase().includes(search.toLowerCase()) ||
     (i.category ?? "").toLowerCase().includes(search.toLowerCase())
   );

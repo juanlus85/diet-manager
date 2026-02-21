@@ -173,8 +173,11 @@ export async function getScheduledDays(userId: number, from?: string, to?: strin
   const db = await getDb();
   if (!db) return [];
   const conditions = [eq(scheduledDays.userId, userId)];
-  if (from) conditions.push(gte(scheduledDays.scheduledDate, new Date(from)));
-  if (to) conditions.push(lte(scheduledDays.scheduledDate, new Date(to)));
+  // Las fechas se almacenan como DATE en MySQL (sin hora), pero Drizzle las devuelve como
+  // Date con hora 00:00:00 UTC. Para filtrar correctamente usamos T00:00:00Z (inicio del día UTC)
+  // y T23:59:59Z (fin del día UTC) para el rango.
+  if (from) conditions.push(gte(scheduledDays.scheduledDate, new Date(from + "T00:00:00Z")));
+  if (to) conditions.push(lte(scheduledDays.scheduledDate, new Date(to + "T23:59:59Z")));
   return db
     .select({
       scheduled: scheduledDays,
@@ -242,7 +245,23 @@ export async function setIngredientAvailability(id: number, isAvailable: boolean
 export async function getShoppingList(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(shoppingList).where(eq(shoppingList.userId, userId)).orderBy(shoppingList.createdAt);
+  // Hacemos LEFT JOIN con scheduledDays para obtener la fecha del día al que pertenece el ingrediente
+  const rows = await db
+    .select({
+      id: shoppingList.id,
+      userId: shoppingList.userId,
+      ingredientName: shoppingList.ingredientName,
+      quantity: shoppingList.quantity,
+      isPurchased: shoppingList.isPurchased,
+      scheduledDayId: shoppingList.scheduledDayId,
+      createdAt: shoppingList.createdAt,
+      scheduledDate: scheduledDays.scheduledDate,
+    })
+    .from(shoppingList)
+    .leftJoin(scheduledDays, eq(shoppingList.scheduledDayId, scheduledDays.id))
+    .where(eq(shoppingList.userId, userId))
+    .orderBy(scheduledDays.scheduledDate, shoppingList.createdAt);
+  return rows;
 }
 
 export async function addShoppingItem(data: InsertShoppingItem) {
@@ -338,7 +357,7 @@ export async function deleteActivityLog(id: number) {
   await db.delete(activityLogs).where(eq(activityLogs.id, id));
 }
 
-// ─── Ingredients ──────────────────────────────────────────────────────────────
+// ─── Ingredients ─────────────────────────────────────────────────────────────
 export async function getIngredients(userId: number) {
   const db = await getDb();
   if (!db) return [];
