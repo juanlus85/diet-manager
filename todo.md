@@ -62,3 +62,6 @@
 - [ ] Importar datos históricos desde Excel/CSV
 - [ ] Modo oscuro
 - [ ] Versión PWA para móvil
+
+## Bug activo v2.4
+- [ ] Bug crítico: página Hoy sigue mostrando el menú del día siguiente (zona horaria UTC vs local, persiste)

@@ -25,20 +25,25 @@ import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { Link } from "wouter";
 
-// Devuelve YYYY-MM-DD usando la fecha LOCAL del navegador (evita desfase UTC)
+// Devuelve YYYY-MM-DD usando componentes UTC.
+// Las fechas en la BD se almacenan como DATE (YYYY-MM-DD) a medianoche UTC,
+// por lo que comparamos siempre en UTC para evitar desfases de zona horaria.
 function formatDate(d: Date) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
 
-// Extrae la fecha local de un valor que puede venir como Date o string desde la BD
+// Extrae la fecha de un valor que puede venir como Date o string desde la BD.
+// Las fechas se almacenan como DATE en MySQL (YYYY-MM-DD) y Drizzle las devuelve como
+// Date con hora 00:00:00 UTC. Usamos getUTC* para obtener el día correcto sin desfase.
 function extractLocalDate(d: Date | string): string {
   if (d instanceof Date) {
-    // La BD devuelve fechas en UTC; ajustamos al offset local para obtener el día correcto
-    const local = new Date(d.getTime() + d.getTimezoneOffset() * -60000);
-    return formatDate(local);
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
   }
   // Si es string, puede ser "2026-02-21T00:00:00.000Z" o "2026-02-21"
   const s = String(d);

@@ -22,7 +22,11 @@ import {
 } from "lucide-react";
 
 function formatDate(d: Date) {
-  return d.toISOString().slice(0, 10);
+  // Usamos getUTC* para evitar desfase de zona horaria
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 const PAGE_SIZE = 7;
