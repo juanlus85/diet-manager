@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import DashboardLayout from "./components/DashboardLayout";
+import LoginPage from "./pages/Login";
 import Today from "./pages/Today";
 import Calendar from "./pages/Calendar";
 import MenuHistory from "./pages/MenuHistory";
@@ -17,7 +18,11 @@ import Profile from "./pages/Profile";
 
 function Router() {
   return (
-    <DashboardLayout>
+    <Switch>
+      {/* Ruta de login pública (sin DashboardLayout) */}
+      <Route path="/login">{() => <LoginPage />}</Route>
+      <Route>
+      <DashboardLayout>
       <Switch>
         <Route path={"/"} component={Today} />
         <Route path={"/calendar"} component={Calendar} />
@@ -32,6 +37,8 @@ function Router() {
         <Route component={NotFound} />
       </Switch>
     </DashboardLayout>
+    </Route>
+    </Switch>
   );
 }
 

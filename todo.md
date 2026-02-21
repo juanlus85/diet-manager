@@ -83,3 +83,6 @@
 - [x] Frontend: página de login/registro con formulario usuario/contraseña
 - [x] Frontend: eliminar dependencia de Manus OAuth (VITE_OAUTH_PORTAL_URL)
 - [x] Tests: actualizar tests de autenticación (12/12 pasando)
+
+## Bug corregido v3.1
+- [x] Bug VPS corregido: "TypeError: Invalid URL" — getLoginUrl() en const.ts usaba VITE_OAUTH_PORTAL_URL sin comprobar si existía. Ahora si no hay portal OAuth, redirige al login local (/login). Se añadió ruta /login en App.tsx fuera del DashboardLayout.
