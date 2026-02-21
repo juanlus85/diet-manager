@@ -45,3 +45,23 @@
 - [ ] Importar datos históricos desde Excel/CSV
 - [ ] Modo oscuro
 - [ ] Versión PWA para móvil
+
+## Mejoras v2 (completadas)
+- [x] Página Hoy: mejorar claridad visual de primer y segundo plato (1° y 2° con etiqueta clara)
+- [x] Página Hoy: tap/hover sobre ingredientes → tooltip "Añadir a lista de la compra"
+- [x] Página Hoy: marcar almuerzo/cena con "todos los ingredientes disponibles"
+- [x] Página Hoy: marcar comida como completada (almuerzo y cena por separado)
+- [x] Calendario: lista vertical en móvil, cuadrícula en desktop, celdas más grandes
+- [x] Calendario: drag & drop entre días
+- [x] Calendario: selector de menús con búsqueda y paginación, muestra todos los platos
+- [x] Control de Peso: sin placeholder en el input de peso
+- [x] Control de Peso: análisis completo de objetivos (kg perdidos, kg restantes, días, % logrado, ritmo necesario)
+- [x] Recetas: campo "tipo de comida" eliminado del formulario
+
+## Mejoras mobile-first (v2.1 completadas)
+- [x] DayMenuCard: tarjetas separadas almuerzo/cena con colores diferenciados (naranja/índigo)
+- [x] Chips de ingredientes con tooltip y tap para añadir a la compra
+- [x] Botones touch-friendly para marcar almuerzo y cena completados
+- [x] Bottom navigation bar en móvil + sidebar en desktop
+- [x] Tipografía y espaciado optimizados (font-size 16px en inputs para evitar zoom en iOS)
+- [x] Calendario: lista vertical en móvil con días más grandes y legibles

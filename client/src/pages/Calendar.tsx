@@ -1,18 +1,31 @@
-import { useState, useRef } from "react";
+import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { format, addDays, startOfWeek, addWeeks, subWeeks } from "date-fns";
+import { format, addDays, startOfWeek, addWeeks, subWeeks, isToday as dateFnsIsToday } from "date-fns";
 import { es } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Plus, GripVertical, Trash2, Sun, Moon, Coffee } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  GripVertical,
+  Trash2,
+  Sun,
+  Moon,
+  Coffee,
+  Search,
+  CheckCircle2,
+  CalendarDays,
+} from "lucide-react";
 
 function formatDate(d: Date) {
   return d.toISOString().slice(0, 10);
 }
+
+const PAGE_SIZE = 7;
 
 export default function Calendar() {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -20,15 +33,24 @@ export default function Calendar() {
   const [dropTargetDate, setDropTargetDate] = useState<string | null>(null);
   const [addDayOpen, setAddDayOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
-  const [selectedMenuId, setSelectedMenuId] = useState<string>("");
+  const [selectedMenuId, setSelectedMenuId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [menuPage, setMenuPage] = useState(0);
 
   const from = formatDate(weekStart);
   const to = formatDate(addDays(weekStart, 6));
 
   const { data: scheduled, refetch } = trpc.menu.listScheduledDays.useQuery({ from, to });
   const { data: menuDays } = trpc.menu.listMenuDays.useQuery();
+
   const scheduleDay = trpc.menu.scheduleDay.useMutation({
-    onSuccess: () => { refetch(); setAddDayOpen(false); toast.success("Día programado"); },
+    onSuccess: () => {
+      refetch();
+      setAddDayOpen(false);
+      setSelectedMenuId(null);
+      setSearchQuery("");
+      toast.success("Día programado correctamente");
+    },
   });
   const deleteScheduled = trpc.menu.deleteScheduledDay.useMutation({
     onSuccess: () => { refetch(); toast.success("Día eliminado del calendario"); },
@@ -45,6 +67,23 @@ export default function Calendar() {
       return ds === dateStr;
     }) ?? [];
   };
+
+  // Filtered + paginated menu list
+  const filteredMenus = useMemo(() => {
+    if (!menuDays) return [];
+    const q = searchQuery.toLowerCase();
+    if (!q) return menuDays;
+    return menuDays.filter(
+      (m) =>
+        m.lunch1.toLowerCase().includes(q) ||
+        (m.lunch2 ?? "").toLowerCase().includes(q) ||
+        m.dinner1.toLowerCase().includes(q) ||
+        (m.dinner2 ?? "").toLowerCase().includes(q)
+    );
+  }, [menuDays, searchQuery]);
+
+  const totalPages = Math.ceil(filteredMenus.length / PAGE_SIZE);
+  const pagedMenus = filteredMenus.slice(menuPage * PAGE_SIZE, (menuPage + 1) * PAGE_SIZE);
 
   const handleDragStart = (id: number) => setDraggedId(id);
   const handleDragOver = (e: React.DragEvent, date: string) => {
@@ -64,111 +103,133 @@ export default function Calendar() {
     setDropTargetDate(null);
   };
 
-  const today = formatDate(new Date());
+  const openAddDialog = (dateStr: string) => {
+    setSelectedDate(dateStr);
+    setSelectedMenuId(null);
+    setSearchQuery("");
+    setMenuPage(0);
+    setAddDayOpen(true);
+  };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Calendario de Dieta</h1>
-          <p className="text-muted-foreground text-sm">
-            Semana del {format(weekStart, "d 'de' MMMM", { locale: es })} al{" "}
-            {format(addDays(weekStart, 6), "d 'de' MMMM", { locale: es })}
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-lg font-bold truncate">Calendario</h1>
+          <p className="text-xs text-muted-foreground">
+            {format(weekStart, "d MMM", { locale: es })} – {format(addDays(weekStart, 6), "d MMM yyyy", { locale: es })}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => setWeekStart(subWeeks(weekStart, 1))}>
+        <div className="flex items-center gap-1 shrink-0">
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setWeekStart(subWeeks(weekStart, 1))}>
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}>
+          <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}>
             Hoy
           </Button>
-          <Button variant="outline" size="icon" onClick={() => setWeekStart(addWeeks(weekStart, 1))}>
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setWeekStart(addWeeks(weekStart, 1))}>
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
-      {/* Cuadrícula de la semana */}
-      <div className="grid grid-cols-1 sm:grid-cols-7 gap-2">
+      {/* Vista semanal: lista en móvil, cuadrícula en desktop */}
+      <div className="flex flex-col sm:grid sm:grid-cols-7 gap-2">
         {weekDays.map((day) => {
           const dateStr = formatDate(day);
           const dayItems = getDayScheduled(day);
-          const isCurrentDay = dateStr === today;
+          const isCurrentDay = dateFnsIsToday(day);
           const isDragTarget = dropTargetDate === dateStr;
 
           return (
             <div
               key={dateStr}
-              className={`min-h-[180px] rounded-xl border-2 p-2 transition-all ${
-                isCurrentDay ? "border-primary bg-primary/5" : "border-border bg-card"
-              } ${isDragTarget ? "border-primary/50 bg-primary/10" : ""}`}
+              className={`rounded-2xl border-2 p-3.5 transition-all
+                ${isCurrentDay ? "border-primary bg-primary/5 shadow-md shadow-primary/10" : "border-border bg-card"}
+                ${isDragTarget ? "border-primary/60 bg-primary/10 scale-[1.01]" : ""}
+              `}
               onDragOver={(e) => handleDragOver(e, dateStr)}
               onDrop={(e) => handleDrop(e, dateStr)}
               onDragLeave={() => setDropTargetDate(null)}
             >
               {/* Cabecera del día */}
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase">
-                    {format(day, "EEE", { locale: es })}
-                  </p>
-                  <p className={`text-lg font-bold leading-none ${isCurrentDay ? "text-primary" : ""}`}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-base shrink-0
+                    ${isCurrentDay ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
                     {format(day, "d")}
-                  </p>
+                  </div>
+                  <div>
+                    <p className={`text-sm font-bold capitalize ${isCurrentDay ? "text-primary" : "text-foreground"}`}>
+                      {format(day, "EEEE", { locale: es })}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(day, "d 'de' MMMM", { locale: es })}
+                    </p>
+                  </div>
                 </div>
                 {isCurrentDay && (
-                  <Badge className="text-xs bg-primary text-primary-foreground">Hoy</Badge>
+                  <Badge className="text-[10px] h-5 bg-primary text-primary-foreground">Hoy</Badge>
                 )}
               </div>
 
               {/* Menús del día */}
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 {dayItems.map((s) => (
                   <div
                     key={s.scheduled.id}
                     draggable
                     onDragStart={() => handleDragStart(s.scheduled.id)}
-                    className={`group relative bg-white rounded-lg border p-2 cursor-grab text-xs shadow-sm hover:shadow-md transition-all ${
-                      draggedId === s.scheduled.id ? "opacity-50" : ""
-                    } ${s.scheduled.status === "completed" ? "opacity-60 bg-green-50 border-green-200" : ""}`}
+                    className={`group relative rounded-xl border bg-background p-2.5 cursor-grab shadow-sm hover:shadow-md transition-all active:cursor-grabbing
+                      ${draggedId === s.scheduled.id ? "opacity-40 scale-95" : ""}
+                      ${s.scheduled.status === "completed" ? "opacity-60 bg-green-50/80 border-green-200" : ""}
+                    `}
                   >
-                    <div className="flex items-start gap-1">
-                      <GripVertical className="w-3 h-3 text-muted-foreground mt-0.5 shrink-0" />
-                      <div className="flex-1 min-w-0">
+                    <div className="flex items-start gap-1.5 pr-5">
+                      <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 mt-0.5 shrink-0" />
+                      <div className="flex-1 min-w-0 space-y-1">
                         {s.menu?.breakfast && (
-                          <div className="flex items-center gap-1 mb-0.5">
-                            <Coffee className="w-2.5 h-2.5 text-amber-500 shrink-0" />
-                            <span className="truncate text-muted-foreground">{s.menu.breakfast}</span>
+                          <div className="flex items-center gap-1">
+                            <Coffee className="w-3 h-3 text-amber-500 shrink-0" />
+                            <span className="text-xs text-muted-foreground truncate">{s.menu.breakfast}</span>
                           </div>
                         )}
-                        <div className="flex items-center gap-1 mb-0.5">
-                          <Sun className="w-2.5 h-2.5 text-orange-400 shrink-0" />
-                          <span className="truncate font-medium">{s.menu?.lunch1 ?? "—"}</span>
+                        <div className="flex items-start gap-1">
+                          <Sun className="w-3 h-3 text-orange-500 shrink-0 mt-0.5" />
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-foreground leading-tight truncate">{s.menu?.lunch1 ?? "—"}</p>
+                            {s.menu?.lunch2 && <p className="text-xs text-muted-foreground truncate">{s.menu.lunch2}</p>}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Moon className="w-2.5 h-2.5 text-indigo-400 shrink-0" />
-                          <span className="truncate">{s.menu?.dinner1 ?? "—"}</span>
+                        <div className="flex items-start gap-1">
+                          <Moon className="w-3 h-3 text-indigo-500 shrink-0 mt-0.5" />
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-foreground leading-tight truncate">{s.menu?.dinner1 ?? "—"}</p>
+                            {s.menu?.dinner2 && <p className="text-xs text-muted-foreground truncate">{s.menu.dinner2}</p>}
+                          </div>
                         </div>
                       </div>
                     </div>
+                    {s.scheduled.status === "completed" && (
+                      <CheckCircle2 className="absolute top-2 right-2 w-3.5 h-3.5 text-green-600" />
+                    )}
                     <button
                       onClick={() => deleteScheduled.mutate({ id: s.scheduled.id })}
-                      className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive/80 transition-opacity"
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive/80 transition-opacity p-0.5"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ))}
 
                 {/* Botón añadir */}
                 <button
-                  onClick={() => { setSelectedDate(dateStr); setAddDayOpen(true); }}
-                  className="w-full border-dashed border-2 border-border rounded-lg p-1.5 text-xs text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors flex items-center justify-center gap-1"
+                  onClick={() => openAddDialog(dateStr)}
+                  className="w-full border-dashed border-2 border-border/60 rounded-xl py-2 text-xs text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors flex items-center justify-center gap-1.5 active:scale-95"
                 >
-                  <Plus className="w-3 h-3" />
-                  Añadir
+                  <Plus className="w-3.5 h-3.5" />
+                  Añadir menú
                 </button>
               </div>
             </div>
@@ -176,55 +237,129 @@ export default function Calendar() {
         })}
       </div>
 
-      {/* Dialog añadir menú */}
+      {/* Dialog añadir menú — mejorado con búsqueda y paginación */}
       <Dialog open={addDayOpen} onOpenChange={setAddDayOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Programar menú</DialogTitle>
+        <DialogContent className="max-w-md w-[95vw] max-h-[85vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-4 pt-4 pb-3 border-b shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <CalendarDays className="w-4 h-4 text-primary" />
+              Programar menú
+            </DialogTitle>
+            {selectedDate && (
+              <p className="text-sm text-muted-foreground capitalize">
+                {format(new Date(selectedDate + "T12:00:00"), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
+              </p>
+            )}
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <p className="text-sm font-medium mb-1">Fecha</p>
-              <p className="text-sm text-muted-foreground">
-                {selectedDate && format(new Date(selectedDate + "T12:00:00"), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
-              </p>
+
+          <div className="flex-1 overflow-hidden flex flex-col px-4 py-3 gap-3">
+            {/* Búsqueda */}
+            <div className="relative shrink-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por plato..."
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setMenuPage(0); }}
+                className="pl-9 h-9"
+              />
             </div>
-            <div>
-              <p className="text-sm font-medium mb-2">Seleccionar menú del historial</p>
-              <Select value={selectedMenuId} onValueChange={setSelectedMenuId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Elige un menú..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {menuDays?.map((m) => (
-                    <SelectItem key={m.id} value={String(m.id)}>
-                      <span className="text-xs">
-                        {m.lunch1} / {m.dinner1}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+
+            {/* Lista de menús */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              {filteredMenus.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p className="text-sm">
+                    {searchQuery ? "No hay menús que coincidan con la búsqueda." : "No hay menús en el historial. Sube una dieta primero."}
+                  </p>
+                </div>
+              ) : (
+                pagedMenus.map((m) => {
+                  const isSelected = selectedMenuId === m.id;
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => setSelectedMenuId(isSelected ? null : m.id)}
+                      className={`w-full text-left rounded-xl border-2 p-3 transition-all active:scale-[0.99]
+                        ${isSelected
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/40 hover:bg-muted/30"
+                        }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <div className={`w-5 h-5 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center
+                          ${isSelected ? "border-primary bg-primary" : "border-border"}`}>
+                          {isSelected && <CheckCircle2 className="w-3 h-3 text-primary-foreground" />}
+                        </div>
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-start gap-1.5">
+                            <Sun className="w-3.5 h-3.5 text-orange-500 shrink-0 mt-0.5" />
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-foreground leading-tight">{m.lunch1}</p>
+                              {m.lunch2 && <p className="text-xs text-muted-foreground">{m.lunch2}</p>}
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-1.5">
+                            <Moon className="w-3.5 h-3.5 text-indigo-500 shrink-0 mt-0.5" />
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-foreground leading-tight">{m.dinner1}</p>
+                              {m.dinner2 && <p className="text-xs text-muted-foreground">{m.dinner2}</p>}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
             </div>
-            {!menuDays || menuDays.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-2">
-                No hay menús en el historial. Sube una dieta primero.
-              </p>
-            ) : null}
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setAddDayOpen(false)}>Cancelar</Button>
-              <Button
-                disabled={!selectedMenuId || !selectedDate}
-                onClick={() =>
-                  scheduleDay.mutate({
-                    menuDayId: Number(selectedMenuId),
-                    scheduledDate: selectedDate,
-                  })
-                }
-              >
-                Programar
-              </Button>
-            </div>
+
+            {/* Paginación */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between shrink-0 pt-1 border-t">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={menuPage === 0}
+                  onClick={() => setMenuPage((p) => p - 1)}
+                  className="h-8 px-2"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Anterior
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {menuPage + 1} / {totalPages} ({filteredMenus.length} menús)
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={menuPage >= totalPages - 1}
+                  onClick={() => setMenuPage((p) => p + 1)}
+                  className="h-8 px-2"
+                >
+                  Siguiente
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Footer con botones */}
+          <div className="flex gap-2 px-4 pb-4 pt-2 border-t shrink-0">
+            <Button variant="outline" className="flex-1" onClick={() => setAddDayOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              className="flex-1"
+              disabled={!selectedMenuId || !selectedDate || scheduleDay.isPending}
+              onClick={() =>
+                scheduleDay.mutate({
+                  menuDayId: selectedMenuId!,
+                  scheduledDate: selectedDate,
+                })
+              }
+            >
+              {scheduleDay.isPending ? "Programando..." : "Programar"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

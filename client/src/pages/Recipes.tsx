@@ -39,6 +39,7 @@ export default function Recipes() {
     instructions: "",
     mealType: "almuerzo" as MealType,
   });
+  // mealType se usa internamente pero no se muestra en el formulario
 
   const [ingredientForm, setIngredientForm] = useState({
     name: "",
@@ -138,9 +139,7 @@ export default function Recipes() {
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <Badge variant="secondary" className="text-xs w-fit">
-                      {mealTypeLabel[recipe.mealType]}
-                    </Badge>
+  
                   </CardHeader>
                   <CardContent className="px-4 pb-4 space-y-2">
                     {recipe.description && (
@@ -223,7 +222,7 @@ export default function Recipes() {
               {selectedRecipe.description && (
                 <p className="text-sm text-muted-foreground">{selectedRecipe.description}</p>
               )}
-              <Badge variant="secondary">{mealTypeLabel[selectedRecipe.mealType]}</Badge>
+
               {selectedRecipe.ingredientsList && selectedRecipe.ingredientsList.length > 0 && (
                 <div>
                   <p className="text-sm font-semibold mb-2">Ingredientes:</p>
@@ -260,20 +259,7 @@ export default function Recipes() {
               <Label className="mb-1.5 block">Nombre *</Label>
               <Input value={recipeForm.name} onChange={(e) => setRecipeForm({ ...recipeForm, name: e.target.value })} placeholder="Nombre de la receta" />
             </div>
-            <div>
-              <Label className="mb-1.5 block">Tipo de comida *</Label>
-              <Select value={recipeForm.mealType} onValueChange={(v) => setRecipeForm({ ...recipeForm, mealType: v as MealType })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="almuerzo">Almuerzo</SelectItem>
-                  <SelectItem value="cena">Cena</SelectItem>
-                  <SelectItem value="desayuno">Desayuno</SelectItem>
-                  <SelectItem value="snack">Snack</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Tipo de comida oculto — se asigna automáticamente como "almuerzo" por defecto */}
             <div>
               <Label className="mb-1.5 block">Descripción</Label>
               <Textarea value={recipeForm.description} onChange={(e) => setRecipeForm({ ...recipeForm, description: e.target.value })} rows={2} placeholder="Descripción breve..." />
