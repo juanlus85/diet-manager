@@ -175,11 +175,9 @@ export async function getScheduledDays(userId: number, from?: string, to?: strin
   const db = await getDb();
   if (!db) return [];
   const conditions = [eq(scheduledDays.userId, userId)];
-  // Las fechas se almacenan como DATE en MySQL (sin hora), pero Drizzle las devuelve como
-  // Date con hora 00:00:00 UTC. Para filtrar correctamente usamos T00:00:00Z (inicio del día UTC)
-  // y T23:59:59Z (fin del día UTC) para el rango.
-  if (from) conditions.push(gte(scheduledDays.scheduledDate, new Date(from + "T00:00:00Z")));
-  if (to) conditions.push(lte(scheduledDays.scheduledDate, new Date(to + "T23:59:59Z")));
+  // Con mode: 'string', Drizzle compara strings YYYY-MM-DD directamente con MySQL DATE
+  if (from) conditions.push(gte(scheduledDays.scheduledDate, from));
+  if (to) conditions.push(lte(scheduledDays.scheduledDate, to));
   return db
     .select({
       scheduled: scheduledDays,
@@ -216,7 +214,7 @@ export async function reorderScheduledDays(updates: Array<{ id: number; sortOrde
   for (const u of updates) {
     await db
       .update(scheduledDays)
-      .set({ sortOrder: u.sortOrder, scheduledDate: new Date(u.scheduledDate) as unknown as Date })
+      .set({ sortOrder: u.sortOrder, scheduledDate: u.scheduledDate })
       .where(eq(scheduledDays.id, u.id));
   }
 }
@@ -447,7 +445,7 @@ export async function getWeightStats(userId: number) {
   for (let i = 1; i < logs.length; i++) {
     const diff = logs[i - 1].weight - logs[i].weight;
     const dateVal = logs[i].logDate;
-    weeklyStats.push({ week: dateVal instanceof Date ? dateVal.toISOString().slice(0, 10) : String(dateVal), lost: diff });
+    weeklyStats.push({ week: String(dateVal).slice(0, 10), lost: diff });
   }
 
   return {
@@ -503,7 +501,7 @@ export async function generateWeeklyGoals(userId: number, startDate: string, sta
     const weekD = new Date(weekMs);
     const weekStr = `${weekD.getUTCFullYear()}-${String(weekD.getUTCMonth() + 1).padStart(2, "0")}-${String(weekD.getUTCDate()).padStart(2, "0")}`;
     const target = Math.round((startWeight - i * weeklyLoss) * 10) / 10;
-    goals.push({ userId, weekDate: new Date(weekStr + "T12:00:00Z"), targetWeight: target });
+    goals.push({ userId, weekDate: weekStr, targetWeight: target });
   }
 
   // Insertar todos de golpe (ignorar duplicados)

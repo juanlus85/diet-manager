@@ -68,9 +68,7 @@ export default function Calendar() {
   const getDayScheduled = (date: Date) => {
     const dateStr = formatDate(date);
     return scheduled?.filter((s) => {
-      const d = s.scheduled.scheduledDate;
-      const ds = d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10);
-      return ds === dateStr;
+      return String(s.scheduled.scheduledDate).slice(0, 10) === dateStr;
     }) ?? [];
   };
 
@@ -100,9 +98,7 @@ export default function Calendar() {
     e.preventDefault();
     if (draggedId === null) return;
     const targetItems = scheduled?.filter((s) => {
-      const d = s.scheduled.scheduledDate;
-      const ds = d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10);
-      return ds === targetDate;
+      return String(s.scheduled.scheduledDate).slice(0, 10) === targetDate;
     }) ?? [];
     reorder.mutate([{ id: draggedId, sortOrder: targetItems.length, scheduledDate: targetDate }]);
     setDraggedId(null);
@@ -378,11 +374,7 @@ export default function Calendar() {
             <>
               <DialogHeader className="px-4 pt-4 pb-3 border-b">
                 <DialogTitle className="text-base capitalize">
-                  {format(new Date((
-                    detailItem.scheduled.scheduledDate instanceof Date
-                      ? detailItem.scheduled.scheduledDate.toISOString()
-                      : String(detailItem.scheduled.scheduledDate)
-                  ).slice(0, 10) + "T12:00:00"), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
+                  {format(new Date(String(detailItem.scheduled.scheduledDate).slice(0, 10) + "T12:00:00"), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
                 </DialogTitle>
                 {detailItem.scheduled.status === "completed" && (
                   <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full w-fit">

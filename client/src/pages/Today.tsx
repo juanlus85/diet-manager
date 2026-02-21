@@ -34,18 +34,10 @@ function formatLocalDate(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
-// Extrae la fecha de un valor que puede venir como Date o string desde la BD.
-// Las fechas se almacenan como DATE en MySQL (YYYY-MM-DD) a medianoche UTC.
-// Usamos getUTC* para obtener el día correcto tal como se guardó en la BD.
-function extractDbDate(d: Date | string): string {
-  if (d instanceof Date) {
-    const y = d.getUTCFullYear();
-    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(d.getUTCDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
-  }
-  const s = String(d);
-  return s.slice(0, 10);
+// Extrae la fecha YYYY-MM-DD de un campo DATE de la BD.
+// Con mode:'string' en Drizzle, scheduledDate ya viene como string 'YYYY-MM-DD'.
+function extractDbDate(d: string): string {
+  return String(d).slice(0, 10);
 }
 
 export default function Today() {
@@ -380,7 +372,7 @@ interface DayMenuCardProps {
   scheduled: {
     scheduled: {
       id: number;
-      scheduledDate: Date | string;
+      scheduledDate: string;
       status: string;
       notes?: string | null;
       lunchCompleted?: boolean | null;

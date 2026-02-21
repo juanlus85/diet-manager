@@ -88,7 +88,7 @@ export const menuRouter = router({
       createScheduledDay({
         userId: ctx.user.id,
         menuDayId: input.menuDayId,
-        scheduledDate: input.scheduledDate as unknown as Date,
+        scheduledDate: input.scheduledDate,
         sortOrder: input.sortOrder ?? 0,
         status: "pending",
       })
@@ -106,7 +106,7 @@ export const menuRouter = router({
     .mutation(({ input }) => {
       const { id, scheduledDate, ...rest } = input;
       const data: Record<string, unknown> = { ...rest };
-      if (scheduledDate) data.scheduledDate = new Date(scheduledDate);
+      if (scheduledDate) data.scheduledDate = scheduledDate;
       return updateScheduledDay(id, data as Parameters<typeof updateScheduledDay>[1]);
     }),
 

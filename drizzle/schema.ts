@@ -23,7 +23,7 @@ export const users = mysqlTable("users", {
   targetWeight: float("targetWeight"),
   initialWeight: float("initialWeight"),
   height: float("height"), // cm
-  birthDate: date("birthDate"),
+  birthDate: date("birthDate", { mode: "string" }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -95,7 +95,7 @@ export const scheduledDays = mysqlTable("scheduled_days", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
   menuDayId: int("menuDayId").notNull(),
-  scheduledDate: date("scheduledDate").notNull(),
+  scheduledDate: date("scheduledDate", { mode: "string" }).notNull(),
   // Orden para drag & drop (dentro del mismo día o semana)
   sortOrder: int("sortOrder").default(0).notNull(),
   // Estado del día
@@ -140,7 +140,7 @@ export const weightLogs = mysqlTable("weight_logs", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
   weight: float("weight").notNull(), // kg
-  logDate: date("logDate").notNull(),
+  logDate: date("logDate", { mode: "string" }).notNull(),
   // Objetivo de peso para esa fecha (según plan del endocrino)
   targetWeight: float("targetWeight"),
   notes: text("notes"),
@@ -154,7 +154,7 @@ export type InsertWeightLog = typeof weightLogs.$inferInsert;
 export const weightGoals = mysqlTable("weight_goals", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
-  targetDate: date("targetDate").notNull(),
+  targetDate: date("targetDate", { mode: "string" }).notNull(),
   targetWeight: float("targetWeight").notNull(),
   label: varchar("label", { length: 255 }), // "20 abril", "20 mayo", etc.
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -167,7 +167,7 @@ export type InsertWeightGoal = typeof weightGoals.$inferInsert;
 export const activityLogs = mysqlTable("activity_logs", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
-  logDate: date("logDate").notNull(),
+  logDate: date("logDate", { mode: "string" }).notNull(),
   activityType: varchar("activityType", { length: 255 }).notNull(), // "Gimnasio 1h", "Baloncesto", etc.
   duration: int("duration"), // minutos
   intensity: mysqlEnum("intensity", ["baja", "media", "alta"]).default("media"),
@@ -211,7 +211,7 @@ export type InsertDietUpload = typeof dietUploads.$inferInsert;
 export const weeklyGoals = mysqlTable("weekly_goals", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
-  weekDate: date("weekDate").notNull(), // Fecha del lunes (o día de pesaje) de esa semana
+  weekDate: date("weekDate", { mode: "string" }).notNull(), // Fecha del lunes (o día de pesaje) de esa semana
   targetWeight: float("targetWeight").notNull(), // Objetivo de peso para esa semana
   notes: varchar("notes", { length: 255 }), // Comentarios opcionales (ej. "Semana Santa", "Cumpleaños")
   createdAt: timestamp("createdAt").defaultNow().notNull(),

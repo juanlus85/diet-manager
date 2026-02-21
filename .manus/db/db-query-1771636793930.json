@@ -1,0 +1,52 @@
+{
+  "query": "SELECT id, userId, menuDayId, scheduledDate, status FROM scheduled_days ORDER BY scheduledDate LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user uN1yFnMXg2uz2sS.8082b7f1b822 --database 9ooxAsLz7yvUa6JxLZqCkr --execute SELECT id, userId, menuDayId, scheduledDate, status FROM scheduled_days ORDER BY scheduledDate LIMIT 20;",
+  "rows": [
+    {
+      "id": "1",
+      "userId": "1",
+      "menuDayId": "1",
+      "scheduledDate": "2026-02-18",
+      "status": "pending"
+    },
+    {
+      "id": "2",
+      "userId": "1",
+      "menuDayId": "2",
+      "scheduledDate": "2026-02-19",
+      "status": "pending"
+    },
+    {
+      "id": "3",
+      "userId": "1",
+      "menuDayId": "3",
+      "scheduledDate": "2026-02-20",
+      "status": "pending"
+    },
+    {
+      "id": "4",
+      "userId": "1",
+      "menuDayId": "4",
+      "scheduledDate": "2026-02-21",
+      "status": "pending"
+    },
+    {
+      "id": "6",
+      "userId": "1",
+      "menuDayId": "5",
+      "scheduledDate": "2026-02-22",
+      "status": "pending"
+    },
+    {
+      "id": "7",
+      "userId": "1",
+      "menuDayId": "6",
+      "scheduledDate": "2026-02-23",
+      "status": "pending"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tmenuDayId\tscheduledDate\tstatus\n1\t1\t1\t2026-02-18\tpending\n2\t1\t2\t2026-02-19\tpending\n3\t1\t3\t2026-02-20\tpending\n4\t1\t4\t2026-02-21\tpending\n6\t1\t5\t2026-02-22\tpending\n7\t1\t6\t2026-02-23\tpending\n",
+  "stderr": "",
+  "execution_time_ms": 152
+}

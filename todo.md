@@ -69,3 +69,6 @@
 - [x] Mejora: objetivos semanales de peso (tabla con fecha, objetivo semanal, peso real, kg perdidos semana, estado vs objetivo)
 - [x] Mejora: tabla de seguimiento semanal en Control de Peso con generación automática de objetivos
 - [x] Mejora: router tRPC para weeklyGoals (listWeeklyGoals, upsertWeeklyGoal, deleteWeeklyGoal, generateWeeklyGoals)
+
+## Bug corregido v2.6
+- [x] Bug crítico corregido: el servidor Node.js está en UTC-5. Al guardar fechas como Date objects (new Date('2026-02-22') = UTC midnight), mysql2 las convertía a hora local del servidor (2026-02-21 19:00:00 EST) y MySQL guardaba '2026-02-21' en lugar de '2026-02-22'. Solución: cambiar todos los campos DATE del schema de Drizzle a `mode: 'string'` para que se pasen como strings YYYY-MM-DD directamente a MySQL sin conversión.

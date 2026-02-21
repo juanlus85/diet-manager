@@ -36,7 +36,7 @@ export const healthRouter = router({
       addWeightLog({
         userId: ctx.user.id,
         weight: input.weight,
-        logDate: input.logDate as unknown as Date,
+        logDate: input.logDate,
         targetWeight: input.targetWeight ?? null,
         notes: input.notes ?? null,
       })
@@ -55,7 +55,7 @@ export const healthRouter = router({
     .mutation(({ input }) => {
       const { id, logDate, ...rest } = input;
       const data: Record<string, unknown> = { ...rest };
-      if (logDate) data.logDate = new Date(logDate);
+      if (logDate) data.logDate = logDate;
       return updateWeightLog(id, data as Parameters<typeof updateWeightLog>[1]);
     }),
 
@@ -77,7 +77,7 @@ export const healthRouter = router({
     .mutation(({ ctx, input }) =>
       addWeightGoal({
         userId: ctx.user.id,
-        targetDate: input.targetDate as unknown as Date,
+        targetDate: input.targetDate,
         targetWeight: input.targetWeight,
         label: input.label ?? null,
       })
@@ -101,7 +101,7 @@ export const healthRouter = router({
     .mutation(({ ctx, input }) =>
       upsertWeeklyGoal({
         userId: ctx.user.id,
-        weekDate: new Date(input.weekDate + "T12:00:00Z") as unknown as Date,
+        weekDate: input.weekDate,
         targetWeight: input.targetWeight,
         notes: input.notes ?? null,
       })
@@ -148,7 +148,7 @@ export const healthRouter = router({
     .mutation(({ ctx, input }) =>
       addActivityLog({
         userId: ctx.user.id,
-        logDate: input.logDate as unknown as Date,
+        logDate: input.logDate,
         activityType: input.activityType,
         duration: input.duration ?? null,
         intensity: input.intensity ?? "media",
