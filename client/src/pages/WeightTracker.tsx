@@ -22,8 +22,16 @@ import { format, differenceInDays, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 
 function formatDateStr(d: Date | string) {
-  const date = d instanceof Date ? d : new Date(String(d) + "T12:00:00");
-  return date.toISOString().slice(0, 10);
+  if (d instanceof Date) {
+    // Usar fecha LOCAL para evitar desfase de zona horaria (toISOString devuelve UTC)
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+  // Para strings, parsear con mediodía para evitar desfase
+  const date = new Date(String(d) + "T12:00:00");
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 // Convierte "YYYY-MM-DD" a fecha local segura

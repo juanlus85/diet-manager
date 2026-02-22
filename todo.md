@@ -118,3 +118,6 @@
 
 ## Mejora completada v3.9
 - [x] Mejora: Objetivos semanales — semana en curso muestra el último peso registrado hasta hoy. Semanas pasadas muestran el último peso registrado DURANTE esa semana (lunes a domingo); si no hay registro en esa semana, usa el último anterior como fallback. Mismo criterio aplicado a prevActual para el cálculo de kg perdidos. 21/21 tests pasando.
+
+## Bug corregido v3.10
+- [x] Bug corregido: formatDateStr usaba toISOString() que devuelve UTC, causando desfase de zona horaria (ej: las 00:30 del 23 feb en España = 22 feb en UTC). Corregido usando getFullYear/getMonth/getDate (fecha local) para objetos Date. Ahora isCurrentWeek funciona correctamente en cualquier zona horaria. 21/21 tests pasando.
