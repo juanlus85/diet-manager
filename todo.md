@@ -92,3 +92,7 @@
 
 ## Bug corregido v3.3
 - [x] Bug VPS corregido: "Storage upload failed (404 Not Found)" al subir dieta. Causa raíz: dietUpload.ts llamaba a storagePut() (S3 de Manus) que no está disponible en VPS propio. Solución: eliminar la dependencia de S3 y procesar archivos directamente — imágenes se envían como data URL base64 a la IA, PDFs se extraen con pdf-parse y se envían como texto plano. Instalado pdf-parse. 19/19 tests pasando.
+
+## Bugs corregidos v3.4
+- [x] Bug corregido: imagen → "Invalid schema for response_format 'diet_extraction'" (400 Bad Request). Causa: json_schema strict con campos opcionales (breakfast, lunch2, dinner2) no es válido en OpenAI. Solución: cambiar a response_format: { type: "json_object" } y normalizar campos vacíos a undefined en el servidor.
+- [x] Bug corregido: PDF → "Dynamic require of 'pdf-parse' is not supported". Causa: el bundler esbuild no soporta require() dinámico. Solución: import estático de PDFParse desde "pdf-parse" (v2 API: new PDFParse({ data }) + getText()). 21/21 tests pasando.

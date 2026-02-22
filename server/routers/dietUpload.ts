@@ -2,18 +2,37 @@ import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { createDietUpload, getDietUploads, updateDietUpload, createMenuDay } from "../db";
+// Import estático para evitar "Dynamic require is not supported" en esbuild
+import { PDFParse } from "pdf-parse";
 
 /**
- * Extrae texto de un PDF en base64 usando pdf-parse.
- * Importación dinámica para evitar problemas con el bundler.
+ * Extrae texto de un PDF en base64 usando pdf-parse v2.
+ * getText() llama a load() internamente (load es private en los tipos).
  */
 async function extractPdfText(base64: string): Promise<string> {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const pdfParse = require("pdf-parse");
   const buffer = Buffer.from(base64, "base64");
-  const data = await pdfParse(buffer);
-  return data.text ?? "";
+  const parser = new PDFParse({ data: buffer });
+  const result = await parser.getText();
+  return result.text ?? "";
 }
+
+const SYSTEM_PROMPT = `Eres un asistente especializado en extraer información de dietas médicas.
+Analiza la imagen o documento y extrae los menús diarios.
+Devuelve un JSON con el siguiente formato exacto:
+{
+  "days": [
+    {
+      "dayLabel": "Día Primero",
+      "breakfast": "Café solo, té o infusiones (o cadena vacía si no hay desayuno)",
+      "lunch1": "Primer plato del almuerzo",
+      "lunch2": "Segundo plato del almuerzo (o cadena vacía si no hay)",
+      "dinner1": "Primer plato de la cena",
+      "dinner2": "Segundo plato de la cena (o cadena vacía si no hay)"
+    }
+  ]
+}
+Todos los campos son obligatorios. Si no hay desayuno o segundo plato, usa cadena vacía "".
+Extrae todos los días que encuentres en el documento.`;
 
 export const dietUploadRouter = router({
   listUploads: protectedProcedure.query(({ ctx }) => getDietUploads(ctx.user.id)),
@@ -26,7 +45,7 @@ export const dietUploadRouter = router({
   uploadAndExtract: protectedProcedure
     .input(
       z.object({
-        fileBase64: z.string(), // base64 del archivo
+        fileBase64: z.string(),
         fileName: z.string(),
         fileType: z.enum(["image", "pdf"]),
         mimeType: z.string(),
@@ -37,7 +56,7 @@ export const dietUploadRouter = router({
       const uploadId = await createDietUpload({
         userId: ctx.user.id,
         fileName: input.fileName,
-        fileUrl: "", // Sin almacenamiento externo en VPS
+        fileUrl: "",
         fileType: input.fileType,
         status: "pending",
       });
@@ -45,30 +64,11 @@ export const dietUploadRouter = router({
       try {
         let messages: Parameters<typeof invokeLLM>[0]["messages"];
 
-        const systemPrompt = `Eres un asistente especializado en extraer información de dietas médicas.
-Analiza la imagen o documento y extrae los menús diarios.
-Devuelve un JSON con el siguiente formato exacto:
-{
-  "days": [
-    {
-      "dayLabel": "Día Primero",
-      "breakfast": "Café solo, té o infusiones",
-      "lunch1": "Primer plato del almuerzo",
-      "lunch2": "Segundo plato del almuerzo (si existe)",
-      "dinner1": "Primer plato de la cena",
-      "dinner2": "Segundo plato de la cena (si existe)"
-    }
-  ]
-}
-Si no hay desayuno específico, omite el campo breakfast.
-Si solo hay un plato en almuerzo o cena, omite el campo lunch2 o dinner2.
-Extrae todos los días que encuentres en el documento.`;
-
         if (input.fileType === "image") {
           // Imágenes: enviar como data URL base64 directamente (compatible con OpenAI)
           const dataUrl = `data:${input.mimeType};base64,${input.fileBase64}`;
           messages = [
-            { role: "system", content: systemPrompt },
+            { role: "system", content: SYSTEM_PROMPT },
             {
               role: "user",
               content: [
@@ -87,10 +87,12 @@ Extrae todos los días que encuentres en el documento.`;
           // PDFs: extraer texto con pdf-parse y enviarlo como texto plano
           const pdfText = await extractPdfText(input.fileBase64);
           if (!pdfText.trim()) {
-            throw new Error("No se pudo extraer texto del PDF. Asegúrate de que el PDF contiene texto seleccionable (no es una imagen escaneada).");
+            throw new Error(
+              "No se pudo extraer texto del PDF. Si el PDF es una imagen escaneada, convierte las páginas a JPG/PNG y súbelas como imagen."
+            );
           }
           messages = [
-            { role: "system", content: systemPrompt },
+            { role: "system", content: SYSTEM_PROMPT },
             {
               role: "user",
               content: `Por favor, extrae todos los menús diarios de este documento de dieta médica:\n\n${pdfText}`,
@@ -98,43 +100,28 @@ Extrae todos los días que encuentres en el documento.`;
           ];
         }
 
+        // Usar json_object en lugar de json_schema strict para evitar problemas
+        // con campos opcionales en la API de OpenAI
         const response = await invokeLLM({
           messages,
-          response_format: {
-            type: "json_schema",
-            json_schema: {
-              name: "diet_extraction",
-              strict: true,
-              schema: {
-                type: "object",
-                properties: {
-                  days: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        dayLabel: { type: "string" },
-                        breakfast: { type: "string" },
-                        lunch1: { type: "string" },
-                        lunch2: { type: "string" },
-                        dinner1: { type: "string" },
-                        dinner2: { type: "string" },
-                      },
-                      required: ["dayLabel", "lunch1", "dinner1"],
-                      additionalProperties: false,
-                    },
-                  },
-                },
-                required: ["days"],
-                additionalProperties: false,
-              },
-            },
-          },
+          response_format: { type: "json_object" },
         });
 
         const rawContent = response.choices[0]?.message?.content ?? "{}";
-        const parsed = JSON.parse(typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent));
-        const extractedDays = parsed.days ?? [];
+        const parsed = JSON.parse(
+          typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent)
+        );
+        const rawDays: Array<Record<string, string>> = parsed.days ?? [];
+
+        // Normalizar: convertir cadenas vacías en undefined para campos opcionales
+        const extractedDays = rawDays.map((day) => ({
+          dayLabel: day.dayLabel ?? "",
+          breakfast: day.breakfast || undefined,
+          lunch1: day.lunch1 ?? "",
+          lunch2: day.lunch2 || undefined,
+          dinner1: day.dinner1 ?? "",
+          dinner2: day.dinner2 || undefined,
+        }));
 
         await updateDietUpload(uploadId, {
           extractedDays,
