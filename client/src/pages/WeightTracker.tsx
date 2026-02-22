@@ -188,15 +188,19 @@ export default function WeightTracker() {
             closestWeight = logsUpToToday[logsUpToToday.length - 1].weight;
           }
         } else if (isPastWeek) {
-          // Semana pasada: buscar el peso más cercano (±3 días)
-          const goalTs = parseDate(weekStr).getTime();
-          let minDiff = Infinity;
-          for (const log of sortedLogs) {
-            const logTs = parseDate(formatDateStr(log.logDate)).getTime();
-            const diff = Math.abs(logTs - goalTs);
-            if (diff < minDiff && diff <= 3 * 24 * 60 * 60 * 1000) {
-              minDiff = diff;
-              closestWeight = log.weight;
+          // Semana pasada: usar el último peso registrado DURANTE esa semana (lunes a domingo)
+          const weekEndStr = formatDateStr(new Date(weekEndTs));
+          const logsInWeek = sortedLogs.filter(log => {
+            const logStr = formatDateStr(log.logDate);
+            return logStr >= weekStr && logStr <= weekEndStr;
+          });
+          if (logsInWeek.length > 0) {
+            closestWeight = logsInWeek[logsInWeek.length - 1].weight;
+          } else {
+            // Fallback: último peso registrado ANTES del fin de esa semana
+            const logsBeforeWeekEnd = sortedLogs.filter(log => formatDateStr(log.logDate) <= weekEndStr);
+            if (logsBeforeWeekEnd.length > 0) {
+              closestWeight = logsBeforeWeekEnd[logsBeforeWeekEnd.length - 1].weight;
             }
           }
         }
@@ -204,23 +208,30 @@ export default function WeightTracker() {
       }
 
       const prevGoal = idx > 0 ? goals[idx - 1] : null;
-      // Para el prevActual: buscar el peso más cercano a la semana anterior (mismo criterio que closestWeight)
+      // Para el prevActual: mismo criterio que closestWeight (último peso de esa semana)
       let prevActual: number | null = null;
       if (prevGoal) {
         const prevWeekStr = formatDateStr(prevGoal.weekDate);
         prevActual = weightByDate[prevWeekStr] ?? null;
         if (prevActual === null) {
-          const prevIsCurrentOrFuture = prevWeekStr >= todayStr;
-          if (prevIsCurrentOrFuture) {
+          const prevWeekStartTs = parseDate(prevWeekStr).getTime();
+          const prevWeekEndTs = prevWeekStartTs + 6 * 24 * 60 * 60 * 1000;
+          const prevWeekEndStr = formatDateStr(new Date(prevWeekEndTs));
+          const prevIsCurrentWeek = todayTs >= prevWeekStartTs && todayTs <= prevWeekEndTs;
+          const prevIsPastWeek = todayTs > prevWeekEndTs;
+          if (prevIsCurrentWeek) {
             const logsUpToToday = sortedLogs.filter(log => formatDateStr(log.logDate) <= todayStr);
             if (logsUpToToday.length > 0) prevActual = logsUpToToday[logsUpToToday.length - 1].weight;
-          } else {
-            const prevTs = parseDate(prevWeekStr).getTime();
-            let minDiff = Infinity;
-            for (const log of sortedLogs) {
-              const logTs = parseDate(formatDateStr(log.logDate)).getTime();
-              const diff = Math.abs(logTs - prevTs);
-              if (diff < minDiff && diff <= 3 * 24 * 60 * 60 * 1000) { minDiff = diff; prevActual = log.weight; }
+          } else if (prevIsPastWeek) {
+            const logsInPrevWeek = sortedLogs.filter(log => {
+              const logStr = formatDateStr(log.logDate);
+              return logStr >= prevWeekStr && logStr <= prevWeekEndStr;
+            });
+            if (logsInPrevWeek.length > 0) {
+              prevActual = logsInPrevWeek[logsInPrevWeek.length - 1].weight;
+            } else {
+              const logsBeforePrevWeekEnd = sortedLogs.filter(log => formatDateStr(log.logDate) <= prevWeekEndStr);
+              if (logsBeforePrevWeekEnd.length > 0) prevActual = logsBeforePrevWeekEnd[logsBeforePrevWeekEnd.length - 1].weight;
             }
           }
         }

@@ -115,3 +115,6 @@
 - [x] Bug corregido: Perfil — datos persisten al recargar. Añadido trpc.health.getProfile (nuevo procedimiento en health.ts + getUserProfile en db.ts) y useEffect en Profile.tsx que inicializa el formulario con los datos guardados.
 - [x] Mejora: Calendario — ahora muestra hoy + 6 días siguientes en lugar de la semana natural. El botón "Hoy" vuelve al día actual.
 - [x] Fix: import de pdf-parse corregido (import * as pdfParseLib) para evitar error en esbuild. 21/21 tests pasando.
+
+## Mejora completada v3.9
+- [x] Mejora: Objetivos semanales — semana en curso muestra el último peso registrado hasta hoy. Semanas pasadas muestran el último peso registrado DURANTE esa semana (lunes a domingo); si no hay registro en esa semana, usa el último anterior como fallback. Mismo criterio aplicado a prevActual para el cálculo de kg perdidos. 21/21 tests pasando.
