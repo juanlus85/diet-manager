@@ -2,13 +2,27 @@ import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { createDietUpload, getDietUploads, updateDietUpload, createMenuDay } from "../db";
-import { storagePut } from "../storage";
-import { nanoid } from "nanoid";
+
+/**
+ * Extrae texto de un PDF en base64 usando pdf-parse.
+ * Importación dinámica para evitar problemas con el bundler.
+ */
+async function extractPdfText(base64: string): Promise<string> {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const pdfParse = require("pdf-parse");
+  const buffer = Buffer.from(base64, "base64");
+  const data = await pdfParse(buffer);
+  return data.text ?? "";
+}
 
 export const dietUploadRouter = router({
   listUploads: protectedProcedure.query(({ ctx }) => getDietUploads(ctx.user.id)),
 
-  // Subir imagen o PDF en base64 y extraer dieta con LLM
+  /**
+   * Recibe imagen o PDF en base64 y extrae la dieta con LLM.
+   * No usa S3: las imágenes se envían como data URL base64 directamente a la IA,
+   * y los PDFs se procesan extrayendo el texto con pdf-parse.
+   */
   uploadAndExtract: protectedProcedure
     .input(
       z.object({
@@ -19,26 +33,19 @@ export const dietUploadRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // 1. Subir archivo a S3
-      const buffer = Buffer.from(input.fileBase64, "base64");
-      const key = `diet-uploads/${ctx.user.id}/${nanoid()}-${input.fileName}`;
-      const { url: fileUrl } = await storagePut(key, buffer, input.mimeType);
-
-      // 2. Crear registro en DB con estado pending
+      // Crear registro en DB con estado pending (sin URL de S3)
       const uploadId = await createDietUpload({
         userId: ctx.user.id,
         fileName: input.fileName,
-        fileUrl,
+        fileUrl: "", // Sin almacenamiento externo en VPS
         fileType: input.fileType,
         status: "pending",
       });
 
-      // 3. Extraer texto con LLM
       try {
-        const messages: Parameters<typeof invokeLLM>[0]["messages"] = [
-          {
-            role: "system",
-            content: `Eres un asistente especializado en extraer información de dietas médicas.
+        let messages: Parameters<typeof invokeLLM>[0]["messages"];
+
+        const systemPrompt = `Eres un asistente especializado en extraer información de dietas médicas.
 Analiza la imagen o documento y extrae los menús diarios.
 Devuelve un JSON con el siguiente formato exacto:
 {
@@ -55,37 +62,41 @@ Devuelve un JSON con el siguiente formato exacto:
 }
 Si no hay desayuno específico, omite el campo breakfast.
 Si solo hay un plato en almuerzo o cena, omite el campo lunch2 o dinner2.
-Extrae todos los días que encuentres en el documento.`,
-          },
-          {
-            role: "user",
-            content:
-              input.fileType === "image"
-                ? [
-                    {
-                      type: "image_url" as const,
-                      image_url: { url: fileUrl, detail: "high" as const },
-                    },
-                    {
-                      type: "text" as const,
-                      text: "Por favor, extrae todos los menús diarios de esta imagen de dieta médica.",
-                    },
-                  ]
-                : [
-                    {
-                      type: "file_url" as const,
-                      file_url: {
-                        url: fileUrl,
-                        mime_type: "application/pdf" as const,
-                      },
-                    },
-                    {
-                      type: "text" as const,
-                      text: "Por favor, extrae todos los menús diarios de este PDF de dieta médica.",
-                    },
-                  ],
-          },
-        ];
+Extrae todos los días que encuentres en el documento.`;
+
+        if (input.fileType === "image") {
+          // Imágenes: enviar como data URL base64 directamente (compatible con OpenAI)
+          const dataUrl = `data:${input.mimeType};base64,${input.fileBase64}`;
+          messages = [
+            { role: "system", content: systemPrompt },
+            {
+              role: "user",
+              content: [
+                {
+                  type: "image_url" as const,
+                  image_url: { url: dataUrl, detail: "high" as const },
+                },
+                {
+                  type: "text" as const,
+                  text: "Por favor, extrae todos los menús diarios de esta imagen de dieta médica.",
+                },
+              ],
+            },
+          ];
+        } else {
+          // PDFs: extraer texto con pdf-parse y enviarlo como texto plano
+          const pdfText = await extractPdfText(input.fileBase64);
+          if (!pdfText.trim()) {
+            throw new Error("No se pudo extraer texto del PDF. Asegúrate de que el PDF contiene texto seleccionable (no es una imagen escaneada).");
+          }
+          messages = [
+            { role: "system", content: systemPrompt },
+            {
+              role: "user",
+              content: `Por favor, extrae todos los menús diarios de este documento de dieta médica:\n\n${pdfText}`,
+            },
+          ];
+        }
 
         const response = await invokeLLM({
           messages,
