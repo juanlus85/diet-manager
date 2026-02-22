@@ -9,14 +9,41 @@
  *           Solución: usar response_format: { type: "json_object" }.
  *       (2) require() dinámico de pdf-parse → error de bundler esbuild.
  *           Solución: import estático de PDFParse desde "pdf-parse".
+ * v3.5: PDF escaneado (sin texto seleccionable) → 0 días sin error.
+ *       Solución: detectar texto vacío y usar pdftoppm para convertir a imágenes.
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { execFile } from "child_process";
+
+// Mock de child_process para simular pdftoppm
+vi.mock("child_process", () => ({
+  execFile: vi.fn(),
+}));
+
+// Mock de util.promisify para que devuelva una función que resuelve
+vi.mock("util", () => ({
+  promisify: vi.fn((fn) => {
+    if (fn === execFile) {
+      return vi.fn().mockResolvedValue({ stdout: "", stderr: "" });
+    }
+    return vi.fn();
+  }),
+}));
+
+// Mock de fs/promises para simular operaciones de archivos temporales
+vi.mock("fs/promises", () => ({
+  writeFile: vi.fn().mockResolvedValue(undefined),
+  readdir: vi.fn().mockResolvedValue(["page-1.png"]),
+  readFile: vi.fn().mockResolvedValue(Buffer.from("fake-png-data")),
+  rm: vi.fn().mockResolvedValue(undefined),
+  mkdir: vi.fn().mockResolvedValue(undefined),
+}));
 
 // Mock de pdf-parse para no necesitar archivos PDF reales en los tests
 vi.mock("pdf-parse", () => ({
   PDFParse: vi.fn().mockImplementation(() => ({
     getText: vi.fn().mockResolvedValue({
-      text: "Día 1\nAlmuerzo: Ensalada\nCena: Sopa de verduras\n",
+      text: "",  // Simular PDF escaneado (sin texto)
       pages: [],
     }),
   })),
@@ -190,10 +217,12 @@ describe("dietUpload.uploadAndExtract", () => {
     );
   });
 
-  it("procesa un PDF extrayendo texto con pdf-parse (import estático)", async () => {
+  it("procesa un PDF escaneado usando pdftoppm para convertir a imágenes", async () => {
     const { ctx } = createAuthContext();
     const caller = appRouter.createCaller(ctx);
 
+    // El mock de pdf-parse devuelve texto vacío (PDF escaneado)
+    // El mock de fs/promises.readdir devuelve ["page-1.png"]
     const result = await caller.dietUpload.uploadAndExtract({
       fileBase64: MINIMAL_PDF_BASE64,
       fileName: "dieta.pdf",
@@ -204,13 +233,15 @@ describe("dietUpload.uploadAndExtract", () => {
     expect(result.status).toBe("processed");
     expect(result.extractedDays).toHaveLength(1);
 
-    // Para PDFs, el contenido del mensaje debe ser texto plano (no image_url)
+    // Para PDFs escaneados, el contenido del mensaje debe ser array con imágenes
     expect(invokeLLM).toHaveBeenCalledOnce();
     const callArgs = vi.mocked(invokeLLM).mock.calls[0][0];
     const userMessage = callArgs.messages[1];
-    // El contenido debe ser un string (texto extraído del PDF)
-    expect(typeof userMessage.content).toBe("string");
-    expect(userMessage.content as string).toContain("Día 1");
+    // El contenido debe ser un array (imágenes de páginas)
+    expect(Array.isArray(userMessage.content)).toBe(true);
+    const firstContent = (userMessage.content as any[])[0];
+    expect(firstContent.type).toBe("image_url");
+    expect(firstContent.image_url.url).toMatch(/^data:image\/png;base64,/);
   });
 
   it("normaliza campos opcionales vacíos a undefined en los días extraídos", async () => {

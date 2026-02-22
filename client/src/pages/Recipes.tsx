@@ -65,6 +65,16 @@ export default function Recipes() {
 
   const selectedRecipe = recipes?.find((r) => r.id === selectedRecipeId) ?? null;
 
+  // ingredientsList puede llegar como string JSON desde MySQL — parsear si es necesario
+  const parseIngredientsList = (raw: unknown): Array<{ ingredientId?: number; name: string; quantity?: string; unit?: string }> => {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === "string") {
+      try { return JSON.parse(raw); } catch { return []; }
+    }
+    return [];
+  };
+
   const mealTypeLabel: Record<MealType, string> = {
     almuerzo: "Almuerzo",
     cena: "Cena",
@@ -145,9 +155,9 @@ export default function Recipes() {
                     {recipe.description && (
                       <p className="text-xs text-muted-foreground line-clamp-2">{recipe.description}</p>
                     )}
-                    {recipe.ingredientsList && recipe.ingredientsList.length > 0 && (
+                    {parseIngredientsList(recipe.ingredientsList).length > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        {recipe.ingredientsList.length} ingredientes
+                        {parseIngredientsList(recipe.ingredientsList).length} ingredientes
                       </p>
                     )}
                   </CardContent>
@@ -223,11 +233,11 @@ export default function Recipes() {
                 <p className="text-sm text-muted-foreground">{selectedRecipe.description}</p>
               )}
 
-              {selectedRecipe.ingredientsList && selectedRecipe.ingredientsList.length > 0 && (
+              {parseIngredientsList(selectedRecipe.ingredientsList).length > 0 && (
                 <div>
                   <p className="text-sm font-semibold mb-2">Ingredientes:</p>
                   <ul className="space-y-1">
-                    {selectedRecipe.ingredientsList.map((ing, i) => (
+                    {parseIngredientsList(selectedRecipe.ingredientsList).map((ing, i) => (
                       <li key={i} className="text-sm text-muted-foreground flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
                         {ing.quantity && <span className="font-medium">{ing.quantity} {ing.unit}</span>}

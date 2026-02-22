@@ -96,3 +96,7 @@
 ## Bugs corregidos v3.4
 - [x] Bug corregido: imagen → "Invalid schema for response_format 'diet_extraction'" (400 Bad Request). Causa: json_schema strict con campos opcionales (breakfast, lunch2, dinner2) no es válido en OpenAI. Solución: cambiar a response_format: { type: "json_object" } y normalizar campos vacíos a undefined en el servidor.
 - [x] Bug corregido: PDF → "Dynamic require of 'pdf-parse' is not supported". Causa: el bundler esbuild no soporta require() dinámico. Solución: import estático de PDFParse desde "pdf-parse" (v2 API: new PDFParse({ data }) + getText()). 21/21 tests pasando.
+
+## Bugs corregidos v3.5
+- [x] Bug corregido: recetas → "ingredientsList.map is not a function". Causa: MySQL devuelve columnas JSON como string en algunos drivers. Solución: añadir parseIngredientsList() en Recipes.tsx que parsea el JSON si llega como string, o devuelve el array directamente si ya es array.
+- [x] Bug corregido: PDF escaneado → 0 días sin error. Causa: pdf-parse solo extrae texto seleccionable; PDFs escaneados no tienen texto. Solución: detectar texto vacío (<50 chars) y usar pdftoppm para convertir las páginas a imágenes PNG, que se envían a la IA con visión. 21/21 tests pasando.
