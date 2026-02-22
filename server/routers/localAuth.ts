@@ -10,15 +10,13 @@
  */
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { users } from "../../drizzle/schema";
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
-
-const getJwtSecret = () => process.env.JWT_SECRET || "change-this-in-production";
+import { sdk } from "../_core/sdk";
 
 export const localAuthRouter = router({
   /** Registrar una cuenta nueva */
@@ -98,11 +96,15 @@ export const localAuthRouter = router({
       // Actualizar lastSignedIn
       await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, user.id));
 
-      // Crear token JWT
-      const token = jwt.sign(
-        { openId: user.openId, name: user.name || "" },
-        getJwtSecret(),
-        { expiresIn: "365d" }
+      // Crear token JWT usando jose (compatible con sdk.verifySession)
+      // appId usa "local" cuando VITE_APP_ID no está configurado en VPS
+      const token = await sdk.signSession(
+        {
+          openId: user.openId,
+          appId: process.env.VITE_APP_ID || "local",
+          name: user.name || "",
+        },
+        { expiresInMs: ONE_YEAR_MS }
       );
 
       // Establecer cookie de sesión

@@ -86,3 +86,6 @@
 
 ## Bug corregido v3.1
 - [x] Bug VPS corregido: "TypeError: Invalid URL" — getLoginUrl() en const.ts usaba VITE_OAUTH_PORTAL_URL sin comprobar si existía. Ahora si no hay portal OAuth, redirige al login local (/login). Se añadió ruta /login en App.tsx fuera del DashboardLayout.
+
+## Bug corregido v3.2
+- [x] Bug VPS corregido: login con usuario/contraseña no redirige tras autenticarse. Causa raíz: localAuth.ts usaba `jsonwebtoken` (jwt.sign) para crear el token, pero `sdk.verifySession` usa `jose` (jwtVerify) y además requiere el campo `appId` en el payload. El token generado con jsonwebtoken sin `appId` fallaba la verificación y el usuario nunca se autenticaba. Solución: reemplazar jsonwebtoken por `sdk.signSession()` que usa jose con payload {openId, appId, name}. 16/16 tests pasando.
