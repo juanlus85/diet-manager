@@ -106,3 +106,6 @@
 - [x] Mejora 2: Pantalla Hoy — botón "Subir dieta" reemplazado por "Peso" (modal de registro + redirige a Control de Peso) y "Ejercicio" (redirige a /weight).
 - [x] Mejora 3: Objetivos semanales — botón de edición (lápiz) por fila en la tabla; abre el dialog con los datos precargados. Nueva función updateWeeklyGoal en db.ts y campo id opcional en upsertWeeklyGoal.
 - [x] Bug corregido: Calendario — segundo plato (lunch2/dinner2) ahora tiene el mismo estilo que el primero. 21/21 tests pasando.
+
+## Bug corregido v3.7
+- [x] Bug corregido: Objetivos semanales — la semana en curso (y futuras) ahora muestra el último peso registrado hasta hoy en la columna "Real", en lugar de buscar el peso más cercano al lunes de la semana. Para semanas pasadas se mantiene la lógica de ±3 días. 21/21 tests pasando.

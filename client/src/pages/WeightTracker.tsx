@@ -163,6 +163,7 @@ export default function WeightTracker() {
 
   // Tabla de objetivos semanales enriquecida
   const weeklyTableData = useMemo(() => {
+    const todayStr = formatDateStr(today);
     const goals = [...(weeklyGoals ?? [])].sort((a, b) =>
       new Date(String(a.weekDate)).getTime() - new Date(String(b.weekDate)).getTime()
     );
@@ -170,23 +171,54 @@ export default function WeightTracker() {
       const weekStr = formatDateStr(goal.weekDate);
       const actualWeight = weightByDate[weekStr] ?? null;
 
-      // Buscar el peso real más cercano a esa semana (±3 días)
+      // Para la semana en curso (fecha de pesaje >= hoy), usar el último peso registrado hasta hoy
+      // Para semanas pasadas, buscar el peso más cercano (±3 días)
       let closestWeight: number | null = actualWeight;
       if (closestWeight === null) {
-        const goalTs = parseDate(weekStr).getTime();
-        let minDiff = Infinity;
-        for (const log of sortedLogs) {
-          const logTs = parseDate(formatDateStr(log.logDate)).getTime();
-          const diff = Math.abs(logTs - goalTs);
-          if (diff < minDiff && diff <= 3 * 24 * 60 * 60 * 1000) {
-            minDiff = diff;
-            closestWeight = log.weight;
+        const isCurrentOrFutureWeek = weekStr >= todayStr;
+        if (isCurrentOrFutureWeek) {
+          // Usar el último peso registrado hasta hoy (el más reciente)
+          const logsUpToToday = sortedLogs.filter(log => formatDateStr(log.logDate) <= todayStr);
+          if (logsUpToToday.length > 0) {
+            closestWeight = logsUpToToday[logsUpToToday.length - 1].weight;
+          }
+        } else {
+          // Semana pasada: buscar el peso más cercano (±3 días)
+          const goalTs = parseDate(weekStr).getTime();
+          let minDiff = Infinity;
+          for (const log of sortedLogs) {
+            const logTs = parseDate(formatDateStr(log.logDate)).getTime();
+            const diff = Math.abs(logTs - goalTs);
+            if (diff < minDiff && diff <= 3 * 24 * 60 * 60 * 1000) {
+              minDiff = diff;
+              closestWeight = log.weight;
+            }
           }
         }
       }
 
       const prevGoal = idx > 0 ? goals[idx - 1] : null;
-      const prevActual = prevGoal ? (weightByDate[formatDateStr(prevGoal.weekDate)] ?? null) : null;
+      // Para el prevActual: buscar el peso más cercano a la semana anterior (mismo criterio que closestWeight)
+      let prevActual: number | null = null;
+      if (prevGoal) {
+        const prevWeekStr = formatDateStr(prevGoal.weekDate);
+        prevActual = weightByDate[prevWeekStr] ?? null;
+        if (prevActual === null) {
+          const prevIsCurrentOrFuture = prevWeekStr >= todayStr;
+          if (prevIsCurrentOrFuture) {
+            const logsUpToToday = sortedLogs.filter(log => formatDateStr(log.logDate) <= todayStr);
+            if (logsUpToToday.length > 0) prevActual = logsUpToToday[logsUpToToday.length - 1].weight;
+          } else {
+            const prevTs = parseDate(prevWeekStr).getTime();
+            let minDiff = Infinity;
+            for (const log of sortedLogs) {
+              const logTs = parseDate(formatDateStr(log.logDate)).getTime();
+              const diff = Math.abs(logTs - prevTs);
+              if (diff < minDiff && diff <= 3 * 24 * 60 * 60 * 1000) { minDiff = diff; prevActual = log.weight; }
+            }
+          }
+        }
+      }
 
       const kgLostVsTarget = closestWeight !== null ? goal.targetWeight - closestWeight : null; // positivo = por debajo del objetivo (bien)
       const kgLostVsPrev = prevActual !== null && closestWeight !== null ? prevActual - closestWeight : null;
