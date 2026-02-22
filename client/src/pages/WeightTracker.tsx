@@ -29,8 +29,21 @@ function formatDateStr(d: Date | string) {
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
   }
-  // Para strings, parsear con mediodía para evitar desfase
-  const date = new Date(String(d) + "T12:00:00");
+  const s = String(d);
+  // Si ya es YYYY-MM-DD exactamente, devolverlo tal cual
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // Si es un ISO completo ("2026-02-25T05:00:00.000Z"), extraer la parte de fecha UTC
+  // porque MySQL guarda las fechas DATE en UTC midnight
+  if (s.includes('T') || s.includes('Z')) {
+    const utcDate = new Date(s);
+    // Usar UTC para extraer la fecha, ya que MySQL DATE se almacena como UTC midnight
+    const y = utcDate.getUTCFullYear();
+    const m = String(utcDate.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(utcDate.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+  // Para otros strings, parsear con mediodía para evitar desfase
+  const date = new Date(s + "T12:00:00");
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
@@ -171,21 +184,33 @@ export default function WeightTracker() {
 
   // Tabla de objetivos semanales enriquecida
   const weeklyTableData = useMemo(() => {
+    // Crear today DENTRO del memo para garantizar que siempre tenga el valor correcto
+    const today = new Date();
     const todayStr = formatDateStr(today);
     const goals = [...(weeklyGoals ?? [])].sort((a, b) =>
       new Date(String(a.weekDate)).getTime() - new Date(String(b.weekDate)).getTime()
     );
+    // Encontrar la semana "activa": la primera cuyo fin es >= hoy (no ha terminado aún)
+    // Si hoy es antes del inicio de esa semana, también se considera activa (es la próxima)
+    const todayTs2 = parseDate(todayStr).getTime();
+    const activeWeekIdx = goals.findIndex(g => {
+      const ws = parseDate(formatDateStr(g.weekDate)).getTime();
+      const we = ws + 6 * 24 * 60 * 60 * 1000;
+      return we >= todayTs2; // La semana no ha terminado todavía
+    });
+
     return goals.map((goal, idx) => {
       const weekStr = formatDateStr(goal.weekDate);
       const actualWeight = weightByDate[weekStr] ?? null;
 
       // Determinar si esta semana es la semana en curso, pasada o futura
-      // La semana en curso: el lunes de la semana <= hoy <= domingo de la semana (lunes + 6 días)
+      // La semana "activa" es la primera que no ha terminado (puede ser la semana actual o la próxima)
       const weekStartTs = parseDate(weekStr).getTime();
       const weekEndTs = weekStartTs + 6 * 24 * 60 * 60 * 1000;
       const todayTs = parseDate(todayStr).getTime();
-      const isCurrentWeek = todayTs >= weekStartTs && todayTs <= weekEndTs;
-      const isPastWeek = todayTs > weekEndTs;
+      // isCurrentWeek: la semana contiene hoy O es la semana activa más próxima
+      const isCurrentWeek = idx === activeWeekIdx;
+      const isPastWeek = todayTs > weekEndTs && idx !== activeWeekIdx;
 
       let closestWeight: number | null = actualWeight;
       if (closestWeight === null) {

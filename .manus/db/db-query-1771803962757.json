@@ -1,0 +1,74 @@
+{
+  "query": "SELECT * FROM weekly_goals ORDER BY weekDate DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user uN1yFnMXg2uz2sS.8082b7f1b822 --database 9ooxAsLz7yvUa6JxLZqCkr --execute SELECT * FROM weekly_goals ORDER BY weekDate DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "9",
+      "userId": "1",
+      "weekDate": "2026-04-15",
+      "targetWeight": "120",
+      "notes": "NULL",
+      "createdAt": "2026-02-21 01:15:58"
+    },
+    {
+      "id": "8",
+      "userId": "1",
+      "weekDate": "2026-04-08",
+      "targetWeight": "122.9",
+      "notes": "NULL",
+      "createdAt": "2026-02-21 01:15:58"
+    },
+    {
+      "id": "7",
+      "userId": "1",
+      "weekDate": "2026-04-01",
+      "targetWeight": "125.9",
+      "notes": "NULL",
+      "createdAt": "2026-02-21 01:15:58"
+    },
+    {
+      "id": "6",
+      "userId": "1",
+      "weekDate": "2026-03-25",
+      "targetWeight": "128.8",
+      "notes": "NULL",
+      "createdAt": "2026-02-21 01:15:58"
+    },
+    {
+      "id": "5",
+      "userId": "1",
+      "weekDate": "2026-03-18",
+      "targetWeight": "131.8",
+      "notes": "NULL",
+      "createdAt": "2026-02-21 01:15:58"
+    },
+    {
+      "id": "4",
+      "userId": "1",
+      "weekDate": "2026-03-11",
+      "targetWeight": "134.7",
+      "notes": "NULL",
+      "createdAt": "2026-02-21 01:15:58"
+    },
+    {
+      "id": "3",
+      "userId": "1",
+      "weekDate": "2026-03-04",
+      "targetWeight": "137.6",
+      "notes": "NULL",
+      "createdAt": "2026-02-21 01:15:58"
+    },
+    {
+      "id": "2",
+      "userId": "1",
+      "weekDate": "2026-02-25",
+      "targetWeight": "139",
+      "notes": "NULL",
+      "createdAt": "2026-02-21 01:15:58"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tweekDate\ttargetWeight\tnotes\tcreatedAt\n9\t1\t2026-04-15\t120\tNULL\t2026-02-21 01:15:58\n8\t1\t2026-04-08\t122.9\tNULL\t2026-02-21 01:15:58\n7\t1\t2026-04-01\t125.9\tNULL\t2026-02-21 01:15:58\n6\t1\t2026-03-25\t128.8\tNULL\t2026-02-21 01:15:58\n5\t1\t2026-03-18\t131.8\tNULL\t2026-02-21 01:15:58\n4\t1\t2026-03-11\t134.7\tNULL\t2026-02-21 01:15:58\n3\t1\t2026-03-04\t137.6\tNULL\t2026-02-21 01:15:58\n2\t1\t2026-02-25\t139\tNULL\t2026-02-21 01:15:58\n",
+  "stderr": "",
+  "execution_time_ms": 55
+}

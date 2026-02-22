@@ -1,0 +1,8 @@
+{
+  "query": "SELECT * FROM weekly_goals ORDER BY week_date DESC LIMIT 10; SELECT * FROM weight_logs ORDER BY log_date DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user uN1yFnMXg2uz2sS.8082b7f1b822 --database 9ooxAsLz7yvUa6JxLZqCkr --execute SELECT * FROM weekly_goals ORDER BY week_date DESC LIMIT 10; SELECT * FROM weight_logs ORDER BY log_date DESC LIMIT 10;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'week_date' in 'order clause'"
+  ]
+}

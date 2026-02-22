@@ -121,3 +121,8 @@
 
 ## Bug corregido v3.10
 - [x] Bug corregido: formatDateStr usaba toISOString() que devuelve UTC, causando desfase de zona horaria (ej: las 00:30 del 23 feb en España = 22 feb en UTC). Corregido usando getFullYear/getMonth/getDate (fecha local) para objetos Date. Ahora isCurrentWeek funciona correctamente en cualquier zona horaria. 21/21 tests pasando.
+
+## Bug corregido v3.11
+- [x] Bug corregido: mysql2 devolvía campos DATE como Date objects ISO ("2026-02-25T05:00:00.000Z") en lugar de strings "YYYY-MM-DD", a pesar de tener mode: "string" en Drizzle. Solución: inicializar la conexión mysql2 con `dateStrings: true` para que devuelva fechas como strings. Actualizado db.ts para usar mysql2.createPool con dateStrings: true.
+- [x] Bug corregido: formatDateStr no manejaba strings ISO completos (con T y Z). Añadida detección de ISO completo para extraer la fecha UTC directamente (usando getUTCFullYear/Month/Date), ya que MySQL DATE se almacena como UTC midnight.
+- [x] Bug corregido: isCurrentWeek fallaba cuando hoy está antes del inicio de la semana objetivo (ej: hoy es domingo 23 Feb y la semana empieza el miércoles 25 Feb). Nueva lógica: la semana "activa" es la primera cuyo fin (weekDate + 6 días) es >= hoy. Esa semana muestra el último peso registrado hasta hoy. 21/21 tests pasando.

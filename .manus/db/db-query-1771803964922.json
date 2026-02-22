@@ -1,0 +1,58 @@
+{
+  "query": "SELECT id, userId, weekDate, targetWeight FROM weekly_goals ORDER BY weekDate DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user uN1yFnMXg2uz2sS.8082b7f1b822 --database 9ooxAsLz7yvUa6JxLZqCkr --execute SELECT id, userId, weekDate, targetWeight FROM weekly_goals ORDER BY weekDate DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "9",
+      "userId": "1",
+      "weekDate": "2026-04-15",
+      "targetWeight": "120"
+    },
+    {
+      "id": "8",
+      "userId": "1",
+      "weekDate": "2026-04-08",
+      "targetWeight": "122.9"
+    },
+    {
+      "id": "7",
+      "userId": "1",
+      "weekDate": "2026-04-01",
+      "targetWeight": "125.9"
+    },
+    {
+      "id": "6",
+      "userId": "1",
+      "weekDate": "2026-03-25",
+      "targetWeight": "128.8"
+    },
+    {
+      "id": "5",
+      "userId": "1",
+      "weekDate": "2026-03-18",
+      "targetWeight": "131.8"
+    },
+    {
+      "id": "4",
+      "userId": "1",
+      "weekDate": "2026-03-11",
+      "targetWeight": "134.7"
+    },
+    {
+      "id": "3",
+      "userId": "1",
+      "weekDate": "2026-03-04",
+      "targetWeight": "137.6"
+    },
+    {
+      "id": "2",
+      "userId": "1",
+      "weekDate": "2026-02-25",
+      "targetWeight": "139"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\tweekDate\ttargetWeight\n9\t1\t2026-04-15\t120\n8\t1\t2026-04-08\t122.9\n7\t1\t2026-04-01\t125.9\n6\t1\t2026-03-25\t128.8\n5\t1\t2026-03-18\t131.8\n4\t1\t2026-03-11\t134.7\n3\t1\t2026-03-04\t137.6\n2\t1\t2026-02-25\t139\n",
+  "stderr": "",
+  "execution_time_ms": 52
+}
