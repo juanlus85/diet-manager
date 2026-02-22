@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { User, Scale, Info, Save, LogOut } from "lucide-react";
 
 export default function Profile() {
   const { user, logout } = useAuth();
+  const { data: profile } = trpc.health.getProfile.useQuery();
   const updateProfile = trpc.health.updateProfile.useMutation({
     onSuccess: () => { toast.success("Perfil actualizado"); },
   });
@@ -21,6 +22,18 @@ export default function Profile() {
     height: "",
     birthDate: "",
   });
+
+  // Inicializar el formulario con los datos guardados en la base de datos
+  useEffect(() => {
+    if (profile) {
+      setForm({
+        initialWeight: profile.initialWeight != null ? String(profile.initialWeight) : "",
+        targetWeight: profile.targetWeight != null ? String(profile.targetWeight) : "",
+        height: profile.height != null ? String(profile.height) : "",
+        birthDate: profile.birthDate ? String(profile.birthDate).slice(0, 10) : "",
+      });
+    }
+  }, [profile]);
 
   const handleSave = () => {
     updateProfile.mutate({

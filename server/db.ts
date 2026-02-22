@@ -87,15 +87,29 @@ export async function getUserByOpenId(openId: string) {
   return result[0];
 }
 
+export async function getUserProfile(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select({
+    id: users.id,
+    name: users.name,
+    email: users.email,
+    height: users.height,
+    birthDate: users.birthDate,
+    initialWeight: users.initialWeight,
+    targetWeight: users.targetWeight,
+  }).from(users).where(eq(users.id, userId)).limit(1);
+  return result[0] ?? null;
+}
+
 export async function updateUserProfile(
   userId: number,
   data: { targetWeight?: number; initialWeight?: number; height?: number; birthDate?: string }
 ) {
   const db = await getDb();
   if (!db) return;
-  const { birthDate, ...rest } = data;
-  const updateData: Partial<typeof users.$inferInsert> = { ...rest };
-  if (birthDate) (updateData as Record<string, unknown>).birthDate = new Date(birthDate);
+  // birthDate es mode:'string' en Drizzle — guardar como YYYY-MM-DD directamente, sin convertir a Date
+  const updateData: Partial<typeof users.$inferInsert> = { ...data };
   await db.update(users).set(updateData).where(eq(users.id, userId));
 }
 

@@ -136,7 +136,7 @@ export default function Today() {
             onClick={() => setWeightModalOpen(true)}
           >
             <Scale className="w-3.5 h-3.5" />
-            Peso
+            Añadir Peso
           </Button>
           <Link href="/weight">
             <Button size="sm" variant="outline" className="gap-1.5 h-9 text-xs">

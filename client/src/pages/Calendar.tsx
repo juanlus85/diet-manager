@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { format, addDays, startOfWeek, addWeeks, subWeeks, isToday as dateFnsIsToday } from "date-fns";
+import { format, addDays, startOfDay, addWeeks, subWeeks, isToday as dateFnsIsToday } from "date-fns";
 import { es } from "date-fns/locale";
 import {
   ChevronLeft,
@@ -33,7 +33,7 @@ function formatDate(d: Date) {
 const PAGE_SIZE = 7;
 
 export default function Calendar() {
-  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const [weekStart, setWeekStart] = useState(() => startOfDay(new Date()));
   const [draggedId, setDraggedId] = useState<number | null>(null);
   const [dropTargetDate, setDropTargetDate] = useState<string | null>(null);
   const [addDayOpen, setAddDayOpen] = useState(false);
@@ -128,7 +128,7 @@ export default function Calendar() {
           <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setWeekStart(subWeeks(weekStart, 1))}>
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))}>
+          <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={() => setWeekStart(startOfDay(new Date()))}>
             Hoy
           </Button>
           <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setWeekStart(addWeeks(weekStart, 1))}>

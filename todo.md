@@ -109,3 +109,9 @@
 
 ## Bug corregido v3.7
 - [x] Bug corregido: Objetivos semanales — la semana en curso (y futuras) ahora muestra el último peso registrado hasta hoy en la columna "Real", en lugar de buscar el peso más cercano al lunes de la semana. Para semanas pasadas se mantiene la lógica de ±3 días. 21/21 tests pasando.
+
+### Bugs corregidos v3.8
+- [x] Bug corregido: semanas futuras muestran vacío (—) correctamente. La condición isCurrentWeek ahora verifica que hoy esté entre el lunes y el domingo de la semana. Solo la semana en curso muestra el último peso registrado.
+- [x] Bug corregido: Perfil — datos persisten al recargar. Añadido trpc.health.getProfile (nuevo procedimiento en health.ts + getUserProfile en db.ts) y useEffect en Profile.tsx que inicializa el formulario con los datos guardados.
+- [x] Mejora: Calendario — ahora muestra hoy + 6 días siguientes en lugar de la semana natural. El botón "Hoy" vuelve al día actual.
+- [x] Fix: import de pdf-parse corregido (import * as pdfParseLib) para evitar error en esbuild. 21/21 tests pasando.

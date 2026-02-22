@@ -10,6 +10,7 @@ import {
   deleteWeightLog,
   generateWeeklyGoals,
   getActivityLogs,
+  getUserProfile,
   getWeeklyGoals,
   getWeightGoals,
   getWeightLogs,
@@ -174,6 +175,8 @@ export const healthRouter = router({
   getWeightStats: protectedProcedure.query(({ ctx }) => getWeightStats(ctx.user.id)),
 
   // ─── Perfil del usuario ─────────────────────────────────────────────────────
+  getProfile: protectedProcedure.query(({ ctx }) => getUserProfile(ctx.user.id)),
+
   updateProfile: protectedProcedure
     .input(
       z.object({

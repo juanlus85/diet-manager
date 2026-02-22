@@ -171,18 +171,23 @@ export default function WeightTracker() {
       const weekStr = formatDateStr(goal.weekDate);
       const actualWeight = weightByDate[weekStr] ?? null;
 
-      // Para la semana en curso (fecha de pesaje >= hoy), usar el último peso registrado hasta hoy
-      // Para semanas pasadas, buscar el peso más cercano (±3 días)
+      // Determinar si esta semana es la semana en curso, pasada o futura
+      // La semana en curso: el lunes de la semana <= hoy <= domingo de la semana (lunes + 6 días)
+      const weekStartTs = parseDate(weekStr).getTime();
+      const weekEndTs = weekStartTs + 6 * 24 * 60 * 60 * 1000;
+      const todayTs = parseDate(todayStr).getTime();
+      const isCurrentWeek = todayTs >= weekStartTs && todayTs <= weekEndTs;
+      const isPastWeek = todayTs > weekEndTs;
+
       let closestWeight: number | null = actualWeight;
       if (closestWeight === null) {
-        const isCurrentOrFutureWeek = weekStr >= todayStr;
-        if (isCurrentOrFutureWeek) {
-          // Usar el último peso registrado hasta hoy (el más reciente)
+        if (isCurrentWeek) {
+          // Semana en curso: usar el último peso registrado hasta hoy
           const logsUpToToday = sortedLogs.filter(log => formatDateStr(log.logDate) <= todayStr);
           if (logsUpToToday.length > 0) {
             closestWeight = logsUpToToday[logsUpToToday.length - 1].weight;
           }
-        } else {
+        } else if (isPastWeek) {
           // Semana pasada: buscar el peso más cercano (±3 días)
           const goalTs = parseDate(weekStr).getTime();
           let minDiff = Infinity;
@@ -195,6 +200,7 @@ export default function WeightTracker() {
             }
           }
         }
+        // Semana futura: closestWeight permanece null (—)
       }
 
       const prevGoal = idx > 0 ? goals[idx - 1] : null;

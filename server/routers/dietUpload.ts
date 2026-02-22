@@ -8,7 +8,8 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { createDietUpload, getDietUploads, updateDietUpload, createMenuDay } from "../db";
 // Import estático para evitar "Dynamic require is not supported" en esbuild
-import { PDFParse } from "pdf-parse";
+import * as pdfParseLib from "pdf-parse";
+const { PDFParse } = pdfParseLib as unknown as { PDFParse: new (opts: { data: Buffer }) => { getText(): Promise<{ text: string }> } };
 
 const execFileAsync = promisify(execFile);
 
