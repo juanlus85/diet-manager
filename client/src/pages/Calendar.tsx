@@ -203,14 +203,14 @@ export default function Calendar() {
                           <Sun className="w-3 h-3 text-orange-500 shrink-0 mt-0.5" />
                           <div className="min-w-0">
                             <p className="text-xs font-semibold text-foreground leading-tight truncate">{s.menu?.lunch1 ?? "—"}</p>
-                            {s.menu?.lunch2 && <p className="text-xs text-muted-foreground truncate">{s.menu.lunch2}</p>}
+                            {s.menu?.lunch2 && <p className="text-xs font-semibold text-foreground leading-tight truncate">{s.menu.lunch2}</p>}
                           </div>
                         </div>
                         <div className="flex items-start gap-1">
                           <Moon className="w-3 h-3 text-indigo-500 shrink-0 mt-0.5" />
                           <div className="min-w-0">
                             <p className="text-xs font-semibold text-foreground leading-tight truncate">{s.menu?.dinner1 ?? "—"}</p>
-                            {s.menu?.dinner2 && <p className="text-xs text-muted-foreground truncate">{s.menu.dinner2}</p>}
+                            {s.menu?.dinner2 && <p className="text-xs font-semibold text-foreground leading-tight truncate">{s.menu.dinner2}</p>}
                           </div>
                         </div>
                       </div>
@@ -299,14 +299,14 @@ export default function Calendar() {
                             <Sun className="w-3.5 h-3.5 text-orange-500 shrink-0 mt-0.5" />
                             <div className="min-w-0">
                               <p className="text-sm font-medium text-foreground leading-tight">{m.lunch1}</p>
-                              {m.lunch2 && <p className="text-xs text-muted-foreground">{m.lunch2}</p>}
+                              {m.lunch2 && <p className="text-sm font-medium text-foreground leading-tight">{m.lunch2}</p>}
                             </div>
                           </div>
                           <div className="flex items-start gap-1.5">
                             <Moon className="w-3.5 h-3.5 text-indigo-500 shrink-0 mt-0.5" />
                             <div className="min-w-0">
                               <p className="text-sm font-medium text-foreground leading-tight">{m.dinner1}</p>
-                              {m.dinner2 && <p className="text-xs text-muted-foreground">{m.dinner2}</p>}
+                              {m.dinner2 && <p className="text-sm font-medium text-foreground leading-tight">{m.dinner2}</p>}
                             </div>
                           </div>
                         </div>

@@ -487,6 +487,14 @@ export async function deleteWeeklyGoal(id: number) {
   await db.delete(weeklyGoals).where(eq(weeklyGoals.id, id));
 }
 
+export async function updateWeeklyGoal(id: number, userId: number, data: { weekDate: string; targetWeight: number; notes: string | null }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(weeklyGoals)
+    .set({ weekDate: data.weekDate, targetWeight: data.targetWeight, notes: data.notes })
+    .where(and(eq(weeklyGoals.id, id), eq(weeklyGoals.userId, userId)));
+}
+
 export async function generateWeeklyGoals(userId: number, startDate: string, startWeight: number, endDate: string, endWeight: number, intervalDays: number = 7) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");

@@ -100,3 +100,9 @@
 ## Bugs corregidos v3.5
 - [x] Bug corregido: recetas → "ingredientsList.map is not a function". Causa: MySQL devuelve columnas JSON como string en algunos drivers. Solución: añadir parseIngredientsList() en Recipes.tsx que parsea el JSON si llega como string, o devuelve el array directamente si ya es array.
 - [x] Bug corregido: PDF escaneado → 0 días sin error. Causa: pdf-parse solo extrae texto seleccionable; PDFs escaneados no tienen texto. Solución: detectar texto vacío (<50 chars) y usar pdftoppm para convertir las páginas a imágenes PNG, que se envían a la IA con visión. 21/21 tests pasando.
+
+## Mejoras completadas v3.6
+- [x] Mejora 1: Pantalla Hoy — tarjeta de peso con toggle ojo (oculto por defecto, se muestra al pulsar).
+- [x] Mejora 2: Pantalla Hoy — botón "Subir dieta" reemplazado por "Peso" (modal de registro + redirige a Control de Peso) y "Ejercicio" (redirige a /weight).
+- [x] Mejora 3: Objetivos semanales — botón de edición (lápiz) por fila en la tabla; abre el dialog con los datos precargados. Nueva función updateWeeklyGoal en db.ts y campo id opcional en upsertWeeklyGoal.
+- [x] Bug corregido: Calendario — segundo plato (lunch2/dinner2) ahora tiene el mismo estilo que el primero. 21/21 tests pasando.

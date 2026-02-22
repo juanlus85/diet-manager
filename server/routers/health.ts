@@ -93,19 +93,29 @@ export const healthRouter = router({
   upsertWeeklyGoal: protectedProcedure
     .input(
       z.object({
+        id: z.number().optional(), // si se pasa, actualiza directamente por id
         weekDate: z.string(), // YYYY-MM-DD
         targetWeight: z.number().positive(),
         notes: z.string().optional(),
       })
     )
-    .mutation(({ ctx, input }) =>
-      upsertWeeklyGoal({
+    .mutation(async ({ ctx, input }) => {
+      if (input.id) {
+        // Edición directa por id (permite cambiar fecha y peso sin crear duplicado)
+        const { updateWeeklyGoal } = await import("../db");
+        return updateWeeklyGoal(input.id, ctx.user.id, {
+          weekDate: input.weekDate,
+          targetWeight: input.targetWeight,
+          notes: input.notes ?? null,
+        });
+      }
+      return upsertWeeklyGoal({
         userId: ctx.user.id,
         weekDate: input.weekDate,
         targetWeight: input.targetWeight,
         notes: input.notes ?? null,
-      })
-    ),
+      });
+    }),
 
   deleteWeeklyGoal: protectedProcedure
     .input(z.object({ id: z.number() }))

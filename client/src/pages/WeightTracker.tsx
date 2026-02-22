@@ -14,7 +14,7 @@ import {
   ResponsiveContainer, Area, AreaChart, ReferenceLine,
 } from "recharts";
 import {
-  Scale, Plus, Trash2, Target, TrendingDown, Activity,
+  Scale, Plus, Trash2, Pencil, Target, TrendingDown, Activity,
   Dumbbell, CalendarDays, CheckCircle2, Clock, AlertCircle,
   ChevronDown, ChevronUp, Sparkles, TableProperties,
 } from "lucide-react";
@@ -72,6 +72,7 @@ export default function WeightTracker() {
       refetchWeekly();
       setWeeklyGoalOpen(false);
       setWeeklyGoalForm({ weekDate: "", targetWeight: "", notes: "" });
+      setEditingWeeklyGoalId(null);
       toast.success("Objetivo semanal guardado");
     },
   });
@@ -102,6 +103,7 @@ export default function WeightTracker() {
     notes: "",
   });
   const [weeklyGoalForm, setWeeklyGoalForm] = useState({ weekDate: "", targetWeight: "", notes: "" });
+  const [editingWeeklyGoalId, setEditingWeeklyGoalId] = useState<number | null>(null);
   const [generateForm, setGenerateForm] = useState({
     startDate: new Date().toISOString().slice(0, 10),
     startWeight: "",
@@ -464,8 +466,23 @@ export default function WeightTracker() {
                             <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
                           )}
                           <button
+                            onClick={() => {
+                              setEditingWeeklyGoalId(row.id);
+                              setWeeklyGoalForm({
+                                weekDate: row.weekStr,
+                                targetWeight: String(row.targetWeight),
+                                notes: row.notes ?? "",
+                              });
+                              setWeeklyGoalOpen(true);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-primary transition-all p-0.5"
+                            title="Editar"
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                          <button
                             onClick={() => deleteWeeklyGoal.mutate({ id: row.id })}
-                            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-0.5 ml-1"
+                            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-0.5"
                             title="Eliminar"
                           >
                             <Trash2 className="w-3 h-3" />
@@ -740,13 +757,13 @@ export default function WeightTracker() {
         </DialogContent>
       </Dialog>
 
-      {/* Añadir objetivo semanal manual */}
-      <Dialog open={weeklyGoalOpen} onOpenChange={setWeeklyGoalOpen}>
+      {/* Añadir/Editar objetivo semanal manual */}
+      <Dialog open={weeklyGoalOpen} onOpenChange={(open) => { setWeeklyGoalOpen(open); if (!open) { setEditingWeeklyGoalId(null); setWeeklyGoalForm({ weekDate: "", targetWeight: "", notes: "" }); } }}>
         <DialogContent className="max-w-sm w-[95vw]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CalendarDays className="w-4 h-4 text-primary" />
-              Objetivo semanal
+              {editingWeeklyGoalId ? <Pencil className="w-4 h-4 text-primary" /> : <CalendarDays className="w-4 h-4 text-primary" />}
+              {editingWeeklyGoalId ? "Editar objetivo semanal" : "Objetivo semanal"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -786,12 +803,13 @@ export default function WeightTracker() {
                 className="flex-1"
                 disabled={!weeklyGoalForm.weekDate || !weeklyGoalForm.targetWeight || upsertWeeklyGoal.isPending}
                 onClick={() => upsertWeeklyGoal.mutate({
+                  id: editingWeeklyGoalId ?? undefined,
                   weekDate: weeklyGoalForm.weekDate,
                   targetWeight: parseFloat(weeklyGoalForm.targetWeight),
                   notes: weeklyGoalForm.notes || undefined,
                 })}
               >
-                {upsertWeeklyGoal.isPending ? "Guardando..." : "Guardar"}
+                {upsertWeeklyGoal.isPending ? "Guardando..." : (editingWeeklyGoalId ? "Actualizar" : "Guardar")}
               </Button>
             </div>
           </div>

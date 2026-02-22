@@ -4,6 +4,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   CalendarDays,
@@ -20,10 +22,13 @@ import {
   Plus,
   Circle,
   ShoppingBag,
+  Eye,
+  EyeOff,
+  Dumbbell,
 } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { es } from "date-fns/locale";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 
 // Devuelve YYYY-MM-DD usando la fecha LOCAL del navegador.
 // Se usa para determinar qué día es "hoy" según la zona horaria del usuario.
@@ -42,7 +47,11 @@ function extractDbDate(d: string): string {
 
 export default function Today() {
   const { user, isAuthenticated } = useAuth();
+  const [, navigate] = useLocation();
   const [dayOffset, setDayOffset] = useState(0);
+  const [showWeight, setShowWeight] = useState(false);
+  const [weightModalOpen, setWeightModalOpen] = useState(false);
+  const [weightInput, setWeightInput] = useState("");
   const today = new Date();
   // Usamos fecha LOCAL del navegador para saber qué día es "hoy" para el usuario
   const todayStr = formatLocalDate(today);
@@ -51,6 +60,22 @@ export default function Today() {
   // Cargamos desde 14 días atrás hasta 14 días adelante para poder navegar
   const from = formatLocalDate(addDays(today, -14));
   const to = formatLocalDate(addDays(today, 14));
+
+  const addWeightLog = trpc.health.addWeightLog.useMutation({
+    onSuccess: () => {
+      toast.success("Peso registrado");
+      setWeightModalOpen(false);
+      setWeightInput("");
+      navigate("/weight");
+    },
+    onError: () => toast.error("Error al guardar el peso"),
+  });
+
+  const handleAddWeight = () => {
+    const w = parseFloat(weightInput);
+    if (isNaN(w) || w < 20 || w > 300) { toast.error("Introduce un peso válido (20–300 kg)"); return; }
+    addWeightLog.mutate({ weight: w, logDate: formatLocalDate(new Date()) });
+  };
 
   const { data: scheduled, refetch } = trpc.menu.listScheduledDays.useQuery({ from, to });
   const { data: weightLogs } = trpc.health.listWeightLogs.useQuery();
@@ -103,22 +128,45 @@ export default function Today() {
             {format(today, "EEEE, d 'de' MMMM", { locale: es })}
           </p>
         </div>
-        <Link href="/upload">
-          <Button size="sm" className="gap-1.5 h-9">
-            <Plus className="w-4 h-4" />
-            Subir dieta
+        <div className="flex gap-1.5">
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 h-9 text-xs"
+            onClick={() => setWeightModalOpen(true)}
+          >
+            <Scale className="w-3.5 h-3.5" />
+            Peso
           </Button>
-        </Link>
+          <Link href="/weight">
+            <Button size="sm" variant="outline" className="gap-1.5 h-9 text-xs">
+              <Dumbbell className="w-3.5 h-3.5" />
+              Ejercicio
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats rápidas — scroll horizontal en móvil */}
       <div className="grid grid-cols-2 gap-2.5">
-        <StatCard
-          icon={<Scale className="w-5 h-5 text-primary" />}
-          bg="bg-primary/8"
-          label="Peso actual"
-          value={latestWeight ? `${latestWeight.weight} kg` : "—"}
-        />
+        {/* Tarjeta de peso con toggle de visibilidad */}
+        <button
+          onClick={() => setShowWeight((v) => !v)}
+          className="bg-primary/8 rounded-2xl p-3.5 flex items-center gap-3 text-left w-full active:scale-95 transition-transform"
+        >
+          <div className="shrink-0"><Scale className="w-5 h-5 text-primary" /></div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-muted-foreground truncate">Peso actual</p>
+            <p className="font-bold text-foreground text-sm">
+              {showWeight
+                ? (latestWeight ? `${latestWeight.weight} kg` : "—")
+                : (latestWeight ? "●●● kg" : "—")}
+            </p>
+          </div>
+          <div className="shrink-0 text-muted-foreground">
+            {showWeight ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+          </div>
+        </button>
         <StatCard
           icon={<CalendarDays className="w-5 h-5 text-blue-600" />}
           bg="bg-blue-50"
@@ -219,6 +267,48 @@ export default function Today() {
           </div>
         </section>
       )}
+
+      {/* Modal: Añadir peso */}
+      <Dialog open={weightModalOpen} onOpenChange={setWeightModalOpen}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Scale className="w-4 h-4 text-primary" />
+              Registrar peso
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <div>
+              <p className="text-xs text-muted-foreground mb-1.5">Peso de hoy ({format(new Date(), "d MMM", { locale: es })})</p>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  step="0.1"
+                  min="20"
+                  max="300"
+                  placeholder="Ej: 85.4"
+                  value={weightInput}
+                  onChange={(e) => setWeightInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddWeight()}
+                  className="flex-1"
+                  autoFocus
+                />
+                <span className="text-sm text-muted-foreground font-medium">kg</span>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setWeightModalOpen(false)}>Cancelar</Button>
+              <Button
+                className="flex-1"
+                onClick={handleAddWeight}
+                disabled={addWeightLog.isPending || !weightInput}
+              >
+                {addWeightLog.isPending ? "Guardando..." : "Guardar"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
