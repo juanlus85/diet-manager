@@ -193,15 +193,19 @@ export default function WeightTracker() {
     const goals = [...(weeklyGoals ?? [])].sort((a, b) =>
       new Date(String(a.weekDate)).getTime() - new Date(String(b.weekDate)).getTime()
     );
-    // Encontrar la semana "activa": la primera cuyo fin es >= hoy (no ha terminado aún)
-    // Si hoy es antes del inicio de esa semana, también se considera activa (es la próxima)
+    // Encontrar la semana "activa": la semana cuya weekDate está más cerca de hoy
+    // Misma lógica que isThisWeek: Math.abs(differenceInDays) mínimo
     const todayTs2 = parseDate(todayStr).getTime();
-    const activeWeekIdx = goals.findIndex(g => {
-      const ws = parseDate(formatDateStr(g.weekDate)).getTime();
-      const we = ws + 6 * 24 * 60 * 60 * 1000;
-      return we >= todayTs2; // La semana no ha terminado todavía
+    let activeWeekIdx = -1;
+    let minDiff = Infinity;
+    goals.forEach((g, i) => {
+      const diff = Math.abs(parseDate(formatDateStr(g.weekDate)).getTime() - todayTs2);
+      if (diff < minDiff) {
+        minDiff = diff;
+        activeWeekIdx = i;
+      }
     });
-    console.log('[DEBUG] activeWeekIdx:', activeWeekIdx, 'goals[activeWeekIdx]:', goals[activeWeekIdx]?.weekDate);
+    console.log('[DEBUG] activeWeekIdx:', activeWeekIdx, 'goals[activeWeekIdx]:', goals[activeWeekIdx]?.weekDate, 'todayStr:', todayStr);
 
     return goals.map((goal, idx) => {
       const weekStr = formatDateStr(goal.weekDate);
