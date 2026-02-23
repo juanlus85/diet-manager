@@ -156,7 +156,7 @@ export default function Today() {
         >
           <div className="shrink-0"><Scale className="w-5 h-5 text-primary" /></div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-muted-foreground truncate">Peso actual</p>
+            <p className="text-xs text-muted-foreground truncate"></p>
             <p className="font-bold text-foreground text-sm">
               {showWeight
                 ? (latestWeight ? `${latestWeight.weight} kg` : "—")
