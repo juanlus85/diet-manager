@@ -1,0 +1,25 @@
+{
+  "name": "Gestor de Dieta",
+  "short_name": "Dieta",
+  "description": "Gestor de dieta médica personal",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a5c3a",
+  "theme_color": "#1a5c3a",
+  "orientation": "portrait",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/pwa-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/pwa-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -126,3 +126,9 @@
 - [x] Bug corregido: mysql2 devolvía campos DATE como Date objects ISO ("2026-02-25T05:00:00.000Z") en lugar de strings "YYYY-MM-DD", a pesar de tener mode: "string" en Drizzle. Solución: inicializar la conexión mysql2 con `dateStrings: true` para que devuelva fechas como strings. Actualizado db.ts para usar mysql2.createPool con dateStrings: true.
 - [x] Bug corregido: formatDateStr no manejaba strings ISO completos (con T y Z). Añadida detección de ISO completo para extraer la fecha UTC directamente (usando getUTCFullYear/Month/Date), ya que MySQL DATE se almacena como UTC midnight.
 - [x] Bug corregido: activeWeekIdx usaba "primera semana cuyo fin >= hoy" pero la semana del 18 Feb (fin=24 Feb) era >= hoy (23 Feb), tomando precedencia sobre la del 25 Feb. Solución definitiva: activeWeekIdx = semana cuya weekDate está más cerca de hoy (misma lógica que la etiqueta visual isThisWeek). Verificado en producción: 25 Feb muestra 138.1 kg correctamente. 21/21 tests pasando.
+
+## PWA v3.12
+- [x] Generar icono PWA personalizado (balanza verde, 512x512 y variantes)
+- [x] Crear manifest.json con nombre, colores y iconos
+- [x] Añadir meta tags Apple (apple-touch-icon, apple-mobile-web-app-capable) en index.html
+- [x] Registrar Service Worker básico para soporte offline

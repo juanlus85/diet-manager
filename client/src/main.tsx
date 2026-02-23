@@ -59,3 +59,12 @@ createRoot(document.getElementById("root")!).render(
     </QueryClientProvider>
   </trpc.Provider>
 );
+
+// Registrar Service Worker para soporte PWA offline
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // Service Worker no disponible en este entorno, ignorar
+    });
+  });
+}
