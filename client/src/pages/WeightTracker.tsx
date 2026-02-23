@@ -187,9 +187,6 @@ export default function WeightTracker() {
     // Crear today DENTRO del memo para garantizar que siempre tenga el valor correcto
     const today = new Date();
     const todayStr = formatDateStr(today);
-    console.log('[DEBUG] today:', today.toISOString(), 'todayStr:', todayStr);
-    console.log('[DEBUG] sortedLogs:', JSON.stringify(sortedLogs.map(l => ({ logDate: l.logDate, weight: l.weight }))));
-    console.log('[DEBUG] weeklyGoals raw:', JSON.stringify((weeklyGoals ?? []).map(g => ({ weekDate: g.weekDate }))));
     const goals = [...(weeklyGoals ?? [])].sort((a, b) =>
       new Date(String(a.weekDate)).getTime() - new Date(String(b.weekDate)).getTime()
     );
@@ -205,7 +202,6 @@ export default function WeightTracker() {
         activeWeekIdx = i;
       }
     });
-    console.log('[DEBUG] activeWeekIdx:', activeWeekIdx, 'goals[activeWeekIdx]:', goals[activeWeekIdx]?.weekDate, 'todayStr:', todayStr);
 
     return goals.map((goal, idx) => {
       const weekStr = formatDateStr(goal.weekDate);
@@ -225,7 +221,6 @@ export default function WeightTracker() {
         if (isCurrentWeek) {
           // Semana en curso: usar el último peso registrado hasta hoy
           const logsUpToToday = sortedLogs.filter(log => formatDateStr(log.logDate) <= todayStr);
-          console.log('[DEBUG] isCurrentWeek weekStr:', weekStr, 'logsUpToToday:', logsUpToToday.length, 'last:', logsUpToToday[logsUpToToday.length-1]?.weight);
           if (logsUpToToday.length > 0) {
             closestWeight = logsUpToToday[logsUpToToday.length - 1].weight;
           }
