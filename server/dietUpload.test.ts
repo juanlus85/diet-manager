@@ -85,12 +85,13 @@ vi.mock("./db", () => ({
   getDietUploads: vi.fn().mockResolvedValue([]),
   updateDietUpload: vi.fn().mockResolvedValue(undefined),
   createMenuDay: vi.fn().mockResolvedValue({ id: 1 }),
+  getOrAssignDietImportBatch: vi.fn().mockResolvedValue(2),
 }));
 
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 import { invokeLLM } from "./_core/llm";
-import { createDietUpload } from "./db";
+import { createDietUpload, createMenuDay, getOrAssignDietImportBatch } from "./db";
 
 function createAuthContext(): { ctx: TrpcContext } {
   const ctx: TrpcContext = {
@@ -259,5 +260,26 @@ describe("dietUpload.uploadAndExtract", () => {
     expect(result.extractedDays[0].dinner2).toBeUndefined();
     // lunch2 tenía valor → debe conservarse
     expect(result.extractedDays[0].lunch2).toBe("Pollo a la plancha");
+  });
+
+  it("asigna códigos consecutivos por documento al confirmar los menús", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+    vi.mocked(createMenuDay)
+      .mockResolvedValueOnce({ id: 10, isDuplicate: false })
+      .mockResolvedValueOnce({ id: 11, isDuplicate: false });
+
+    const result = await caller.dietUpload.confirmExtractedDays({
+      uploadId: 42,
+      days: [
+        { dayLabel: "Día 1", lunch1: "Ensalada", dinner1: "Sopa" },
+        { dayLabel: "Día 2", lunch1: "Pollo", dinner1: "Crema" },
+      ],
+    });
+
+    expect(getOrAssignDietImportBatch).toHaveBeenCalledWith(1, 42);
+    expect(createMenuDay).toHaveBeenNthCalledWith(1, expect.objectContaining({ importBatch: 2, menuCode: "2-A" }));
+    expect(createMenuDay).toHaveBeenNthCalledWith(2, expect.objectContaining({ importBatch: 2, menuCode: "2-B" }));
+    expect(result.map((item) => item.menuCode)).toEqual(["2-A", "2-B"]);
   });
 });

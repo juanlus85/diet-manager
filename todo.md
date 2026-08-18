@@ -132,3 +132,8 @@
 - [x] Crear manifest.json con nombre, colores y iconos
 - [x] Añadir meta tags Apple (apple-touch-icon, apple-mobile-web-app-capable) en index.html
 - [x] Registrar Service Worker básico para soporte offline
+
+## Códigos de menú por importación
+- [x] Asignar un número de lote a cada dieta importada y una letra secuencial a cada día extraído (por ejemplo, 1-A, 1-B, 2-A).
+- [x] Conservar los códigos para menús existentes mediante una migración compatible.
+- [x] Mostrar el código de forma discreta en el historial y al elegir un menú para programarlo.

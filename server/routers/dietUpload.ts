@@ -6,12 +6,24 @@ import { tmpdir } from "os";
 import { join } from "path";
 import { protectedProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
-import { createDietUpload, getDietUploads, updateDietUpload, createMenuDay } from "../db";
+import { createDietUpload, getDietUploads, updateDietUpload, createMenuDay, getOrAssignDietImportBatch } from "../db";
 // Import estático para evitar "Dynamic require is not supported" en esbuild
 import * as pdfParseLib from "pdf-parse";
 const { PDFParse } = pdfParseLib as unknown as { PDFParse: new (opts: { data: Buffer }) => { getText(): Promise<{ text: string }> } };
 
 const execFileAsync = promisify(execFile);
+
+/** Convierte el índice del menú a letras: 0 → A, 25 → Z, 26 → AA. */
+function menuLetter(index: number): string {
+  let value = index + 1;
+  let result = "";
+  while (value > 0) {
+    const remainder = (value - 1) % 26;
+    result = String.fromCharCode(65 + remainder) + result;
+    value = Math.floor((value - 1) / 26);
+  }
+  return result;
+}
 
 const SYSTEM_PROMPT = `Eres un asistente especializado en extraer información de dietas médicas.
 Analiza la imagen o documento y extrae los menús diarios.
@@ -217,6 +229,7 @@ export const dietUploadRouter = router({
   confirmExtractedDays: protectedProcedure
     .input(
       z.object({
+        uploadId: z.number(),
         days: z.array(
           z.object({
             dayLabel: z.string(),
@@ -230,8 +243,11 @@ export const dietUploadRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const importBatch = await getOrAssignDietImportBatch(ctx.user.id, input.uploadId);
       const results = [];
-      for (const day of input.days) {
+      for (let index = 0; index < input.days.length; index++) {
+        const day = input.days[index];
+        const menuCode = `${importBatch}-${menuLetter(index)}`;
         const result = await createMenuDay({
           userId: ctx.user.id,
           breakfast: day.breakfast ?? null,
@@ -241,9 +257,11 @@ export const dietUploadRouter = router({
           dinner2: day.dinner2 ?? null,
           notes: day.dayLabel,
           source: "ocr",
+          importBatch,
+          menuCode,
           contentHash: "",
         });
-        results.push({ ...result, dayLabel: day.dayLabel });
+        results.push({ ...result, dayLabel: day.dayLabel, menuCode });
       }
       return results;
     }),

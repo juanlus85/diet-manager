@@ -103,8 +103,8 @@ export default function MenuHistory() {
             <Card key={menu.id} className="group hover:shadow-md transition-shadow">
               <CardHeader className="pb-2 pt-4 px-4">
                 <div className="flex items-center justify-between">
-                  <Badge variant="secondary" className="text-xs">
-                    Menú #{idx + 1}
+                  <Badge variant="secondary" className="text-xs font-mono" title={menu.menuCode ? "Código de importación" : undefined}>
+                    {menu.menuCode ?? `Menú #${idx + 1}`}
                   </Badge>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button

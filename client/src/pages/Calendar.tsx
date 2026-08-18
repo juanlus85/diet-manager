@@ -78,9 +78,10 @@ export default function Calendar() {
     if (!menuDays) return [];
     const q = searchQuery.toLowerCase();
     if (!q) return menuDays;
-    return menuDays.filter(
-      (m) =>
-        m.lunch1.toLowerCase().includes(q) ||
+      return menuDays.filter(
+        (m) =>
+          (m.menuCode ?? "").toLowerCase().includes(q) ||
+          m.lunch1.toLowerCase().includes(q) ||
         (m.lunch2 ?? "").toLowerCase().includes(q) ||
         m.dinner1.toLowerCase().includes(q) ||
         (m.dinner2 ?? "").toLowerCase().includes(q)
@@ -193,6 +194,11 @@ export default function Calendar() {
                     <div className="flex items-start gap-1.5 pr-5">
                       <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 mt-0.5 shrink-0" />
                       <div className="flex-1 min-w-0 space-y-1">
+                        {s.menu?.menuCode && (
+                          <span className="inline-flex rounded border bg-muted/50 px-1 py-0.5 text-[9px] font-mono font-semibold leading-none text-muted-foreground">
+                            {s.menu.menuCode}
+                          </span>
+                        )}
                         {s.menu?.breakfast && (
                           <div className="flex items-center gap-1">
                             <Coffee className="w-3 h-3 text-amber-500 shrink-0" />
@@ -295,6 +301,11 @@ export default function Calendar() {
                           {isSelected && <CheckCircle2 className="w-3 h-3 text-primary-foreground" />}
                         </div>
                         <div className="flex-1 min-w-0 space-y-1">
+                          {m.menuCode && (
+                            <span className="inline-flex rounded border bg-muted/50 px-1.5 py-0.5 text-[10px] font-mono font-semibold leading-none text-muted-foreground">
+                              {m.menuCode}
+                            </span>
+                          )}
                           <div className="flex items-start gap-1.5">
                             <Sun className="w-3.5 h-3.5 text-orange-500 shrink-0 mt-0.5" />
                             <div className="min-w-0">

@@ -84,6 +84,9 @@ export const menuDays = mysqlTable("menu_days", {
   notes: text("notes"),
   // Origen: manual, ocr, importado
   source: mysqlEnum("source", ["manual", "ocr", "imported"]).default("manual").notNull(),
+  // Identificación del PDF y posición del día dentro de ese documento (ej.: 2-C)
+  importBatch: int("importBatch"),
+  menuCode: varchar("menuCode", { length: 16 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -198,6 +201,8 @@ export const dietUploads = mysqlTable("diet_uploads", {
       dinner2?: string;
     }>
   >(),
+  // Número secuencial del documento confirmado para este usuario
+  importBatch: int("importBatch"),
   status: mysqlEnum("status", ["pending", "processed", "error"]).default("pending").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });

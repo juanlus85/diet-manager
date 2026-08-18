@@ -21,6 +21,7 @@ interface ExtractedDay {
 export default function DietUpload() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [uploadId, setUploadId] = useState<number | null>(null);
   const [extractedDays, setExtractedDays] = useState<ExtractedDay[]>([]);
   const [step, setStep] = useState<"upload" | "processing" | "review" | "done">("upload");
   const [editingDay, setEditingDay] = useState<number | null>(null);
@@ -28,6 +29,7 @@ export default function DietUpload() {
 
   const uploadMutation = trpc.dietUpload.uploadAndExtract.useMutation({
     onSuccess: (data) => {
+      setUploadId(data.uploadId);
       setExtractedDays(data.extractedDays ?? []);
       setStep("review");
     },
@@ -44,7 +46,9 @@ export default function DietUpload() {
       if (duplicates > 0) {
         toast.warning(`${added} menús añadidos, ${duplicates} duplicados omitidos`);
       } else {
-        toast.success(`${added} menús añadidos al historial`);
+        const codes = results.filter((r) => !r.isDuplicate).map((r) => r.menuCode);
+        const codeRange = codes.length > 0 ? ` (${codes[0]}${codes.length > 1 ? ` – ${codes[codes.length - 1]}` : ""})` : "";
+        toast.success(`${added} menús añadidos al historial${codeRange}`);
       }
       setStep("done");
     },
@@ -347,7 +351,7 @@ export default function DietUpload() {
             </Button>
             <Button
               disabled={extractedDays.length === 0 || extractedDays.some((d) => !d.lunch1 || !d.dinner1)}
-              onClick={() => confirmMutation.mutate({ days: extractedDays })}
+              onClick={() => uploadId !== null && confirmMutation.mutate({ uploadId, days: extractedDays })}
               className="gap-2"
             >
               {confirmMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}

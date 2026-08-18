@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2";
 import {
@@ -141,6 +141,7 @@ export function computeMenuHash(day: {
 export async function getMenuDays(userId: number) {
   const db = await getDb();
   if (!db) return [];
+  await backfillLegacyMenuImportCodes(userId);
   return db.select().from(menuDays).where(eq(menuDays.userId, userId)).orderBy(desc(menuDays.createdAt));
 }
 
@@ -169,6 +170,117 @@ export async function createMenuDay(data: InsertMenuDay): Promise<{ id: number; 
 
   const result = await db.insert(menuDays).values({ ...data, contentHash: hash });
   return { id: Number(result[0].insertId), isDuplicate: false };
+}
+
+/**
+ * Obtiene o reserva un lote consecutivo para un documento de dieta confirmado.
+ * El lote pertenece al usuario y se mantiene estable si se vuelve a confirmar
+ * el mismo documento, evitando generar códigos distintos para los mismos días.
+ */
+export async function getOrAssignDietImportBatch(userId: number, uploadId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+
+  // Primero numerar cualquier PDF histórico para no reutilizar su número de lote.
+  await backfillLegacyMenuImportCodes(userId);
+
+  const upload = await db
+    .select()
+    .from(dietUploads)
+    .where(and(eq(dietUploads.id, uploadId), eq(dietUploads.userId, userId)))
+    .limit(1);
+
+  if (!upload[0]) throw new Error("La dieta subida no existe o no te pertenece");
+  if (upload[0].importBatch !== null && upload[0].importBatch !== undefined) {
+    return upload[0].importBatch;
+  }
+
+  const userUploads = await db
+    .select({ importBatch: dietUploads.importBatch })
+    .from(dietUploads)
+    .where(eq(dietUploads.userId, userId));
+  const nextBatch = Math.max(0, ...userUploads.map((item) => item.importBatch ?? 0)) + 1;
+
+  await db
+    .update(dietUploads)
+    .set({ importBatch: nextBatch })
+    .where(and(eq(dietUploads.id, uploadId), eq(dietUploads.userId, userId)));
+
+  return nextBatch;
+}
+
+/**
+ * Asigna códigos a los menús existentes que se crearon antes de esta función.
+ * Recorre los documentos ya procesados en orden cronológico, detecta cada día
+ * por su hash de contenido y conserva la asignación una vez realizada.
+ */
+async function backfillLegacyMenuImportCodes(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  const uploads = await db
+    .select()
+    .from(dietUploads)
+    .where(and(eq(dietUploads.userId, userId), eq(dietUploads.status, "processed")))
+    .orderBy(asc(dietUploads.createdAt));
+  const menus = await db.select().from(menuDays).where(eq(menuDays.userId, userId));
+  const menusByHash = new Map(menus.map((menu) => [menu.contentHash, menu]));
+  let highestBatch = Math.max(
+    0,
+    ...uploads.map((upload) => upload.importBatch ?? 0),
+    ...menus.map((menu) => menu.importBatch ?? 0),
+  );
+
+  for (const upload of uploads) {
+    if (upload.importBatch !== null && upload.importBatch !== undefined) continue;
+
+    let extractedDays = Array.isArray(upload.extractedDays) ? upload.extractedDays : [];
+    if (!Array.isArray(upload.extractedDays) && typeof upload.extractedDays === "string") {
+      try {
+        const parsed = JSON.parse(upload.extractedDays);
+        extractedDays = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        extractedDays = [];
+      }
+    }
+    const matches = extractedDays
+      .map((day, index) => ({
+        index,
+        menu: menusByHash.get(computeMenuHash({
+          breakfast: day.breakfast ?? null,
+          lunch1: day.lunch1,
+          lunch2: day.lunch2 ?? null,
+          dinner1: day.dinner1,
+          dinner2: day.dinner2 ?? null,
+        })),
+      }))
+      .filter((item): item is { index: number; menu: typeof menuDays.$inferSelect } => Boolean(item.menu));
+
+    // Si el documento no aportó ningún menú al historial, no consume un lote.
+    if (matches.length === 0) continue;
+
+    const importBatch = ++highestBatch;
+    await db.update(dietUploads).set({ importBatch }).where(eq(dietUploads.id, upload.id));
+    for (const { index, menu } of matches) {
+      if (menu.menuCode) continue;
+      const menuCode = `${importBatch}-${menuLetterFromIndex(index)}`;
+      await db
+        .update(menuDays)
+        .set({ importBatch, menuCode })
+        .where(eq(menuDays.id, menu.id));
+    }
+  }
+}
+
+function menuLetterFromIndex(index: number): string {
+  let value = index + 1;
+  let result = "";
+  while (value > 0) {
+    const remainder = (value - 1) % 26;
+    result = String.fromCharCode(65 + remainder) + result;
+    value = Math.floor((value - 1) / 26);
+  }
+  return result;
 }
 
 export async function updateMenuDay(id: number, data: Partial<InsertMenuDay>) {
