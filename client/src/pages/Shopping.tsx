@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { jsPDF } from "jspdf";
 import {
-  ShoppingCart, Plus, Trash2, CheckCheck, Sun, Moon, Calendar, Package,
+  ShoppingCart, Plus, Trash2, CheckCheck, Sun, Moon, Calendar, Package, FileDown,
 } from "lucide-react";
 
 function localDateStr(d: Date) {
@@ -69,6 +70,74 @@ export default function Shopping() {
     return d.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "short" });
   };
 
+  const exportPdf = () => {
+    const pendingGroups = grouped.byDay
+      .map(({ date, dayItems }) => ({ date, dayItems: dayItems.filter((item) => !item.isPurchased) }))
+      .filter((group) => group.dayItems.length > 0);
+    const pendingNoDay = grouped.noDay.filter((item) => !item.isPurchased);
+
+    if (pendingGroups.length === 0 && pendingNoDay.length === 0) {
+      toast.info("No hay artículos pendientes para exportar");
+      return;
+    }
+
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 16;
+    let y = 20;
+
+    doc.setFillColor(26, 92, 58);
+    doc.rect(0, 0, pageWidth, 34, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(19);
+    doc.text("Lista de la compra", margin, 17);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text(`Generada el ${new Date().toLocaleDateString("es-ES")}`, margin, 25);
+    y = 45;
+
+    const ensureSpace = (needed: number) => {
+      if (y + needed <= pageHeight - 16) return;
+      doc.addPage();
+      y = 18;
+    };
+
+    const addSection = (title: string, sectionItems: ShoppingItem[]) => {
+      ensureSpace(14);
+      doc.setTextColor(26, 92, 58);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text(title, margin, y);
+      y += 7;
+
+      doc.setTextColor(30, 30, 30);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      for (const item of sectionItems) {
+        const itemText = `${item.ingredientName}${item.quantity ? ` (${item.quantity})` : ""}`;
+        const lines = doc.splitTextToSize(itemText, pageWidth - margin * 2 - 10) as string[];
+        ensureSpace(lines.length * 5 + 3);
+        doc.setDrawColor(110, 110, 110);
+        doc.rect(margin, y - 3.5, 3.5, 3.5);
+        doc.text(lines, margin + 7, y);
+        y += lines.length * 5 + 3;
+      }
+      y += 3;
+    };
+
+    pendingGroups.forEach(({ date, dayItems }) => addSection(formatDate(date), dayItems));
+    if (pendingNoDay.length > 0) addSection("Sin día asignado", pendingNoDay);
+
+    doc.setTextColor(115, 115, 115);
+    doc.setFontSize(8);
+    doc.text(`${pendingCount} artículo${pendingCount === 1 ? "" : "s"} pendiente${pendingCount === 1 ? "" : "s"}`, margin, pageHeight - 10);
+    const dateForFile = localDateStr(new Date()).replaceAll("-", "");
+    doc.save(`lista-compra-${dateForFile}.pdf`);
+    toast.success("Lista de la compra exportada a PDF");
+  };
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -82,12 +151,20 @@ export default function Shopping() {
             {pendingCount} pendientes · {purchasedItems} comprados
           </p>
         </div>
-        {purchasedItems > 0 && (
-          <Button variant="outline" size="sm" onClick={() => clearPurchased.mutate()} className="gap-1.5 text-muted-foreground">
-            <CheckCheck className="w-4 h-4" />
-            Limpiar comprados
-          </Button>
-        )}
+        <div className="flex gap-2 self-end sm:self-auto">
+          {totalItems > 0 && (
+            <Button variant="outline" size="sm" onClick={exportPdf} className="gap-1.5">
+              <FileDown className="w-4 h-4" />
+              PDF
+            </Button>
+          )}
+          {purchasedItems > 0 && (
+            <Button variant="outline" size="sm" onClick={() => clearPurchased.mutate()} className="gap-1.5 text-muted-foreground">
+              <CheckCheck className="w-4 h-4" />
+              Limpiar comprados
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Layout principal */}

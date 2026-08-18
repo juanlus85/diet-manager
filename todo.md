@@ -57,11 +57,11 @@
 - [x] Bug visual: 2° plato igualado al 1° en todos los componentes
 
 ## Pendiente / Mejoras futuras
-- [ ] Exportar lista de la compra a PDF
+- [x] Exportar lista de la compra a PDF
 - [ ] Notificaciones push para recordar registrar el peso
 - [ ] Importar datos históricos desde Excel/CSV
 - [ ] Modo oscuro
-- [ ] Versión PWA para móvil
+- [x] Versión PWA para móvil
 
 ## Mejoras v2.5 (completadas)
 - [x] Bug crítico: corregir bug zona horaria en Today.tsx (usar fecha local del navegador para "hoy", UTC para comparar con BD)
